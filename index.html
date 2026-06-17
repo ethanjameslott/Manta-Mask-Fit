@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Manta Smart Fit</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js" crossorigin="anonymous"></script>
+  <style>
+    :root {
+      --black:    #161616;
+      --surface:  #1e1e1e;
+      --surface2: #272727;
+      --border:   #313131;
+      --text:     #f7f5f0;
+      --muted:    #aaaaaa;
+      --red:      #FF5859;
+      --red-d:    rgba(255,88,89,0.13);
+      --red-b:    rgba(255,88,89,0.3);
+      --radius:   14px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    * { -webkit-tap-highlight-color: transparent; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--black);
+      color: var(--text);
+      font-family: 'Montserrat', system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      overscroll-behavior: none;
+      overflow-x: hidden;
+      min-height: 100dvh;
+    }
+    h1, h2, h3, .poppins {
+      font-family: 'Poppins', system-ui, sans-serif;
+    }
+
+    /* ── Screens ── */
+    .screen { display: none; min-height: 100dvh; flex-direction: column; }
+    .screen.active { display: flex; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      width: 100%; padding: 17px;
+      border: none; border-radius: 13px;
+      font-size: 16px; font-weight: 700; font-family: 'Poppins', sans-serif;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+      letter-spacing: 0.01em;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary {
+      background: var(--red); color: #fff;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(255,88,89,0.35); }
+    .btn-secondary {
+      background: transparent; color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { background: var(--surface2); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 28px;
+    }
+
+    /* ── Mask selection cards ── */
+    .mask-card {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .mask-card.selected { border-color: var(--red); background: var(--red-d); }
+    .mask-card.disabled { opacity: 0.35; pointer-events: none; }
+
+    /* ── Back link ── */
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: var(--muted); font-size: 14px; font-weight: 500;
+      background: none; border: none; cursor: pointer;
+      padding: 0; transition: color 0.15s;
+    }
+    .back-btn:hover { color: var(--text); }
+
+    /* ── Section label ── */
+    .section-label {
+      font-size: 12px; font-weight: 700; letter-spacing: 0.9px;
+      text-transform: uppercase; color: var(--muted);
+    }
+
+    /* ── Camera screen ── */
+    #videoEl {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+    .cam-overlay {
+      position: absolute; inset: 0;
+      pointer-events: none;
+    }
+
+    /* Face guide oval */
+    .face-oval {
+      position: absolute;
+      left: 50%; top: 50%;
+      transform: translate(-50%, -56%);
+      width: 62%; aspect-ratio: 3/4;
+      border-radius: 50%;
+      border: 2.5px solid rgba(255,88,89,0.6);
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.48);
+    }
+    .face-oval::after {
+      content: '';
+      position: absolute; inset: -8px;
+      border-radius: 50%;
+      border: 1.5px dashed rgba(255,88,89,0.25);
+      animation: pulse-oval 2.4s ease-in-out infinite;
+    }
+    @keyframes pulse-oval {
+      0%,100% { transform: scale(1); opacity: 0.3; }
+      50% { transform: scale(1.04); opacity: 0.8; }
+    }
+    .face-oval.good { border-color: #34d399; }
+    .face-oval.good::after { border-color: rgba(52,211,153,0.25); }
+
+    /* Step indicators on camera */
+    .step-dots {
+      display: flex; gap: 8px; align-items: center;
+    }
+    .sdot {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; font-family: 'Poppins', sans-serif;
+      transition: all 0.3s ease;
+    }
+    .sdot.pending { background: var(--surface2); color: var(--muted); border: 1.5px solid var(--border); }
+    .sdot.active  { background: var(--red); color: #fff; box-shadow: 0 0 16px rgba(255,88,89,0.5); }
+    .sdot.done    { background: rgba(52,211,153,0.2); color: #34d399; border: 1.5px solid rgba(52,211,153,0.4); }
+
+    /* Progress bar */
+    .progress-track {
+      height: 4px; border-radius: 2px;
+      background: rgba(255,255,255,0.1); overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; border-radius: 2px;
+      background: var(--red);
+      width: 0%;
+      transition: width 0.1s linear;
+    }
+    .progress-fill.good { background: #34d399; }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 44px; height: 44px;
+      border: 3px solid rgba(255,88,89,0.2);
+      border-top-color: var(--red);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Scan step labels ── */
+    .step-item-row {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 14px; color: rgba(247,245,240,0.25);
+      transition: color 0.4s ease;
+    }
+    .step-item-row.lit { color: rgba(247,245,240,0.9); }
+    .step-item-row .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: rgba(255,255,255,0.15); flex-shrink: 0;
+      transition: background 0.4s ease;
+    }
+    .step-item-row.lit .dot { background: var(--red); }
+
+    /* ── Scan line on analysing screen ── */
+    .scan-line {
+      position: absolute; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--red) 40%, transparent);
+      animation: scan 1.7s ease-in-out infinite;
+      pointer-events: none;
+    }
+    @keyframes scan {
+      from { top: 0; opacity: 1; }
+      to   { top: 100%; opacity: 0; }
+    }
+
+    /* ── Rec cards ── */
+    .rec-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      display: flex; align-items: flex-start; gap: 14px;
+    }
+    .rec-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: var(--red-d); border: 1px solid var(--red-b);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 18px;
+    }
+    .rec-title {
+      font-family: 'Poppins', sans-serif;
+      font-size: 13px; font-weight: 700;
+      color: var(--muted); text-transform: uppercase;
+      letter-spacing: 0.6px; margin-bottom: 4px;
+    }
+    .rec-text {
+      font-size: 14px; line-height: 1.5; color: var(--text);
+      font-weight: 500;
+    }
+
+    /* ── Fit badge on results ── */
+    .fit-badge {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: rgba(52,211,153,0.1);
+      border: 1px solid rgba(52,211,153,0.3);
+      border-radius: 100px;
+      padding: 6px 14px;
+      font-size: 12px; font-weight: 700;
+      letter-spacing: 0.7px; text-transform: uppercase;
+      color: #34d399;
+    }
+    .fit-badge::before {
+      content: ''; display: block;
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #34d399;
+    }
+
+    /* ── Fade in ── */
+    .fade-in {
+      animation: fadeIn 0.4s ease forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Error toast ── */
+    #errToast {
+      position: fixed; bottom: 24px; left: 16px; right: 16px;
+      background: rgba(30,10,10,0.96);
+      border: 1px solid rgba(255,88,89,0.3);
+      color: var(--red); padding: 14px 18px;
+      border-radius: var(--radius); font-size: 14px; text-align: center;
+      display: none; z-index: 999;
+      backdrop-filter: blur(12px);
+    }
+
+    /* ── Mask diagram SVG container ── */
+    .mask-diagram-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 16px 14px;
+      overflow: hidden;
+    }
+
+    /* ── Hidden canvas ── */
+    #hiddenCanvas { display: none; }
+
+    /* ── Mobile layout helpers ── */
+    .page { padding: 0 20px; max-width: 480px; margin: 0 auto; width: 100%; }
+    .pt-safe { padding-top: max(52px, env(safe-area-inset-top, 52px)); }
+    .pb-safe { padding-bottom: max(32px, env(safe-area-inset-bottom, 32px)); }
+  </style>
+</head>
+<body>
+
+<canvas id="hiddenCanvas"></canvas>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 1 · WELCOME
+═══════════════════════════════════════════ -->
+<div id="s-welcome" class="screen active" style="justify-content: space-between;">
+  <div class="page pt-safe" style="padding-top: max(64px, env(safe-area-inset-top,64px)); flex:1; display:flex; flex-direction:column; justify-content:space-between;">
+
+    <div style="text-align:center; padding-top:16px;">
+      <!-- Logo -->
+      <div style="display:inline-flex; flex-direction:column; align-items:center; gap:6px; margin-bottom:48px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <svg width="34" height="22" viewBox="0 0 40 24" fill="none">
+            <rect x="0" y="9" width="40" height="6" rx="3" fill="rgba(255,88,89,0.35)"/>
+            <circle cx="13" cy="12" r="7.5" fill="var(--red)"/>
+            <circle cx="27" cy="12" r="7.5" fill="var(--red)"/>
+          </svg>
+          <span style="font-family:'Poppins',sans-serif; font-size:22px; font-weight:800; letter-spacing:3px;">MANTA</span>
+        </div>
+        <span style="font-size:11px; font-weight:700; letter-spacing:3px; color:var(--red); text-transform:uppercase;">Smart Fit</span>
+      </div>
+
+      <h1 style="font-size:clamp(36px,8vw,52px); font-weight:800; line-height:1.08; letter-spacing:-1.5px; margin-bottom:20px;
+        background: linear-gradient(160deg,#fff 0%,#aaa 100%);
+        -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;">
+        Find your<br/>perfect fit.
+      </h1>
+      <p style="font-size:15px; color:var(--muted); line-height:1.7; max-width:300px; margin:0 auto;">
+        We scan your face to tell you exactly how to set up your Manta mask — no guesswork, no light leaking in.
+      </p>
+    </div>
+
+    <div style="padding-bottom: max(40px, env(safe-area-inset-bottom,40px));">
+      <div style="display:flex; justify-content:center; gap:6px; align-items:center; margin-bottom:28px; font-size:12px; color:rgba(170,170,170,0.6);">
+        <span>Choose mask</span><span style="opacity:0.4">·</span>
+        <span>Face scan</span><span style="opacity:0.4">·</span>
+        <span>Your fit</span>
+      </div>
+      <button class="btn btn-primary" id="startBtn">Get Started →</button>
+      <p style="text-align:center; font-size:11px; color:rgba(170,170,170,0.4); margin-top:14px;">
+        Analysed on-device — photos are never uploaded
+      </p>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 2 · SELECT MASK
+═══════════════════════════════════════════ -->
+<div id="s-select" class="screen">
+  <div class="page pt-safe" style="flex:1; display:flex; flex-direction:column;">
+    <div style="padding-top:max(52px,env(safe-area-inset-top,52px));">
+      <button class="back-btn" id="selectBack">← Back</button>
+      <h2 style="font-size:24px; font-weight:700; margin-top:20px; margin-bottom:6px;">Which mask do you have?</h2>
+      <p style="color:var(--muted); font-size:14px; margin-bottom:28px;">Recommendations are tailored to your specific model.</p>
+    </div>
+
+    <div style="flex:1; display:flex; flex-direction:column; gap:10px;">
+
+      <!-- Manta Sleep Mask -->
+      <div class="mask-card selected" id="card-original" onclick="selectMask('original',this)">
+        <div style="display:flex; align-items:center; gap:14px;">
+          <div style="width:48px; height:48px; border-radius:12px; background:var(--red-d); border:1px solid var(--red-b);
+            display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <svg width="30" height="18" viewBox="0 0 40 22" fill="none">
+              <rect x="0" y="8" width="40" height="6" rx="3" fill="rgba(255,88,89,0.4)"/>
+              <circle cx="13" cy="11" r="6.5" fill="var(--red)"/>
+              <circle cx="27" cy="11" r="6.5" fill="var(--red)"/>
+            </svg>
+          </div>
+          <div style="flex:1;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <span style="font-family:'Poppins',sans-serif; font-weight:700; font-size:15px;">Manta Sleep Mask</span>
+              <div id="radio-original" style="width:20px; height:20px; border-radius:50%; border:2px solid var(--red);
+                display:flex; align-items:center; justify-content:center;">
+                <div style="width:10px; height:10px; border-radius:50%; background:var(--red);"></div>
+              </div>
+            </div>
+            <p style="color:var(--muted); font-size:12px; margin-top:3px;">Adjustable eye cups · The original</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- PRO -->
+      <div class="mask-card disabled">
+        <div style="display:flex; align-items:center; gap:14px;">
+          <div style="width:48px; height:48px; border-radius:12px; background:var(--surface2);
+            display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <svg width="30" height="18" viewBox="0 0 40 22" fill="none">
+              <rect x="0" y="8" width="40" height="6" rx="3" fill="#555"/>
+              <ellipse cx="13" cy="11" rx="7" ry="6" fill="#555"/>
+              <ellipse cx="27" cy="11" rx="7" ry="6" fill="#555"/>
+            </svg>
+          </div>
+          <div style="flex:1;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <span style="font-family:'Poppins',sans-serif; font-weight:700; font-size:15px;">Manta PRO</span>
+              <span style="font-size:11px; background:var(--surface2); color:var(--muted); padding:3px 10px; border-radius:100px; border:1px solid var(--border);">Soon</span>
+            </div>
+            <p style="color:var(--muted); font-size:12px; margin-top:3px;">Deep-dip cups · Maximum blackout</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIM -->
+      <div class="mask-card disabled">
+        <div style="display:flex; align-items:center; gap:14px;">
+          <div style="width:48px; height:48px; border-radius:12px; background:var(--surface2);
+            display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <svg width="30" height="14" viewBox="0 0 40 18" fill="none">
+              <rect x="0" y="6" width="40" height="5" rx="2.5" fill="#555"/>
+              <ellipse cx="13" cy="9" rx="6" ry="5" fill="#555"/>
+              <ellipse cx="27" cy="9" rx="6" ry="5" fill="#555"/>
+            </svg>
+          </div>
+          <div style="flex:1;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <span style="font-family:'Poppins',sans-serif; font-weight:700; font-size:15px;">Manta SLIM</span>
+              <span style="font-size:11px; background:var(--surface2); color:var(--muted); padding:3px 10px; border-radius:100px; border:1px solid var(--border);">Soon</span>
+            </div>
+            <p style="color:var(--muted); font-size:12px; margin-top:3px;">Low-profile · Side sleeper friendly</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="padding: 24px 0 max(32px,env(safe-area-inset-bottom,32px));">
+      <button class="btn btn-primary" id="selectContinue">Continue →</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 3 · INSTRUCTIONS
+═══════════════════════════════════════════ -->
+<div id="s-instructions" class="screen">
+  <div class="page pt-safe" style="flex:1; display:flex; flex-direction:column;">
+    <div style="padding-top:max(52px,env(safe-area-inset-top,52px));">
+      <button class="back-btn" id="instructBack">← Back</button>
+
+      <!-- Step dots -->
+      <div style="display:flex; gap:6px; margin-top:20px; margin-bottom:24px;">
+        <div style="height:4px; border-radius:2px; background:var(--red); flex:1;"></div>
+        <div style="height:4px; border-radius:2px; background:var(--border); flex:1;"></div>
+        <div style="height:4px; border-radius:2px; background:var(--border); flex:1;"></div>
+      </div>
+
+      <h2 style="font-size:22px; font-weight:700; margin-bottom:8px;">3-step face scan</h2>
+      <p style="color:var(--muted); font-size:14px; margin-bottom:28px;">The app auto-captures — just hold each position steady for a moment.</p>
+    </div>
+
+    <!-- Step list -->
+    <div style="flex:1;">
+      <div style="display:flex; flex-direction:column; gap:16px; margin-bottom:32px;">
+
+        <div style="display:flex; gap:14px; align-items:flex-start;">
+          <div style="width:36px; height:36px; border-radius:50%; background:var(--red-d); border:1.5px solid var(--red-b);
+            display:flex; align-items:center; justify-content:center; flex-shrink:0;
+            font-family:'Poppins',sans-serif; font-weight:700; font-size:14px; color:var(--red);">1</div>
+          <div>
+            <p style="font-family:'Poppins',sans-serif; font-weight:700; font-size:14px; margin-bottom:3px;">Look straight ahead</p>
+            <p style="color:var(--muted); font-size:13px;">Face centred in the oval, eyes open, relaxed expression</p>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:14px; align-items:flex-start;">
+          <div style="width:36px; height:36px; border-radius:50%; background:var(--surface2); border:1.5px solid var(--border);
+            display:flex; align-items:center; justify-content:center; flex-shrink:0;
+            font-family:'Poppins',sans-serif; font-weight:700; font-size:14px; color:var(--muted);">2</div>
+          <div>
+            <p style="font-family:'Poppins',sans-serif; font-weight:700; font-size:14px; margin-bottom:3px;">Slowly turn left</p>
+            <p style="color:var(--muted); font-size:13px;">About 30° — as if looking over your left shoulder</p>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:14px; align-items:flex-start;">
+          <div style="width:36px; height:36px; border-radius:50%; background:var(--surface2); border:1.5px solid var(--border);
+            display:flex; align-items:center; justify-content:center; flex-shrink:0;
+            font-family:'Poppins',sans-serif; font-weight:700; font-size:14px; color:var(--muted);">3</div>
+          <div>
+            <p style="font-family:'Poppins',sans-serif; font-weight:700; font-size:14px; margin-bottom:3px;">Then turn right</p>
+            <p style="color:var(--muted); font-size:13px;">Mirror of step 2 — the app auto-captures and analyses</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tips -->
+      <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px;">
+        <p class="section-label" style="margin-bottom:10px;">Quick tips</p>
+        <p style="color:var(--muted); font-size:13px; line-height:1.7;">
+          Good even lighting · Remove glasses · Keep your shoulders still, only rotate your head
+        </p>
+      </div>
+    </div>
+
+    <div style="padding: 24px 0 max(32px,env(safe-area-inset-bottom,32px)); display:flex; flex-direction:column; gap:10px;">
+      <button class="btn btn-primary" id="openCameraBtn">Open Camera</button>
+      <button class="btn btn-secondary" id="uploadBtn">Upload a Photo Instead</button>
+      <input type="file" id="fileInput" accept="image/*" style="display:none;">
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 4 · CAMERA (LIVE SCAN)
+═══════════════════════════════════════════ -->
+<div id="s-camera" class="screen" style="position:relative; background:#000; overflow:hidden; min-height:100dvh;">
+  <video id="videoEl" autoplay playsinline muted></video>
+
+  <!-- Face oval guide -->
+  <div class="face-oval" id="faceOval"></div>
+
+  <!-- Top bar -->
+  <div style="position:absolute; top:0; left:0; right:0;
+    padding: max(52px,env(safe-area-inset-top,52px)) 20px 20px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
+    pointer-events:none;">
+
+    <div style="pointer-events:all;">
+      <button class="back-btn" id="cameraCancel" style="color:rgba(247,245,240,0.7); margin-bottom:14px;">✕ Cancel</button>
+    </div>
+
+    <!-- Step dots -->
+    <div style="display:flex; justify-content:center; gap:10px; pointer-events:none;">
+      <div class="sdot active" id="sdot-0">1</div>
+      <div style="display:flex; align-items:center;">
+        <div style="width:24px; height:1px; background:var(--border);"></div>
+      </div>
+      <div class="sdot pending" id="sdot-1">2</div>
+      <div style="display:flex; align-items:center;">
+        <div style="width:24px; height:1px; background:var(--border);"></div>
+      </div>
+      <div class="sdot pending" id="sdot-2">3</div>
+    </div>
+  </div>
+
+  <!-- Bottom bar -->
+  <div style="position:absolute; bottom:0; left:0; right:0;
+    padding: 24px 28px max(36px,env(safe-area-inset-bottom,36px));
+    background: linear-gradient(to top, rgba(0,0,0,0.75), transparent);">
+
+    <p id="scanInstruction" style="text-align:center; color:var(--text); font-size:15px; font-weight:600;
+      font-family:'Poppins',sans-serif; margin-bottom:14px;">
+      Look straight ahead
+    </p>
+
+    <!-- Progress bar -->
+    <div class="progress-track">
+      <div class="progress-fill" id="scanProgress"></div>
+    </div>
+
+    <p id="scanHint" style="text-align:center; color:var(--muted); font-size:12px; margin-top:10px;">
+      Hold still — auto-capturing…
+    </p>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 5 · ANALYSING
+═══════════════════════════════════════════ -->
+<div id="s-analysing" class="screen" style="align-items:center; justify-content:center; padding:32px 20px;">
+  <div class="fade-in" style="text-align:center; max-width:320px; width:100%;">
+
+    <!-- Photo thumbnail with scan -->
+    <div style="position:relative; width:160px; height:210px; margin:0 auto 28px; border-radius:18px; overflow:hidden; background:var(--surface);">
+      <img id="thumbImg" style="width:100%; height:100%; object-fit:cover;" alt="">
+      <div style="position:absolute; inset:0; background:rgba(255,88,89,0.07);"></div>
+      <div class="scan-line"></div>
+    </div>
+
+    <div style="display:flex; justify-content:center; margin-bottom:20px;">
+      <div class="spinner"></div>
+    </div>
+
+    <h2 style="font-size:20px; font-weight:700; margin-bottom:20px;">Analysing your face…</h2>
+
+    <div id="stepList" style="display:flex; flex-direction:column; gap:10px; text-align:left;">
+      <div class="step-item-row"><div class="dot"></div><span>Detecting facial landmarks</span></div>
+      <div class="step-item-row"><div class="dot"></div><span>Measuring interpupillary distance</span></div>
+      <div class="step-item-row"><div class="dot"></div><span>Calculating nose bridge profile</span></div>
+      <div class="step-item-row"><div class="dot"></div><span>Generating your fit profile</span></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 6 · RESULTS
+═══════════════════════════════════════════ -->
+<div id="s-results" class="screen" style="overflow-y:auto;">
+  <div class="page" style="padding-top:max(56px,env(safe-area-inset-top,56px)); padding-bottom:max(40px,env(safe-area-inset-bottom,40px));">
+
+    <!-- Status badge -->
+    <div style="margin-bottom:14px;">
+      <span class="fit-badge">Fit profile ready</span>
+    </div>
+
+    <h2 style="font-size:26px; font-weight:800; margin-bottom:4px;">Your Perfect Fit</h2>
+    <p id="faceSummary" style="color:var(--muted); font-size:14px; margin-bottom:24px;"></p>
+
+    <!-- Mask diagram -->
+    <div class="mask-diagram-wrap" style="margin-bottom:24px;">
+      <p class="section-label" style="margin-bottom:14px;">Recommended eye cup position</p>
+      <div id="maskDiagram"></div>
+      <p id="diagramCaption" style="text-align:center; font-size:12px; color:var(--muted); margin-top:12px;"></p>
+    </div>
+
+    <!-- Recommendation cards -->
+    <p class="section-label" style="margin-bottom:12px;">Setup instructions</p>
+    <div id="recList" style="display:flex; flex-direction:column; gap:10px; margin-bottom:28px;"></div>
+
+    <!-- Actions -->
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <button class="btn btn-primary" id="retakeBtn">Scan Again</button>
+      <button class="btn btn-secondary" id="restartBtn">Start Over</button>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- Error toast -->
+<div id="errToast"></div>
+
+
+<script>
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let selectedMask  = 'original';
+let camStream     = null;
+let faceMeshInst  = null;
+let fmReady       = false;
+let isProcessing  = false;
+let rafId         = null;
+
+// Scan state
+let scanStep      = 0;   // 0=front, 1=left, 2=right
+let stableFrames  = 0;
+const STABLE_REQ  = { 0: 45, 1: 35, 2: 35 };
+let captures      = {};  // {front, left, right}
+let capturedMain  = null; // dataUrl for the analysing thumb
+
+// FaceMesh result callback
+let fmResultCb    = null;
+
+const INSTRUCTIONS = [
+  'Look straight ahead',
+  'Slowly turn to your left',
+  'Now turn to your right'
+];
+const HINTS = [
+  'Hold still — auto-capturing…',
+  'Hold that angle — auto-capturing…',
+  'Almost done — hold it…'
+];
+
+
+// ═══════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function selectMask(id, el) {
+  selectedMask = id;
+  document.querySelectorAll('.mask-card:not(.disabled)').forEach(c => {
+    c.classList.remove('selected');
+    const r = c.querySelector('[id^="radio-"]');
+    if (r) r.innerHTML = '';
+  });
+  el.classList.add('selected');
+  const radio = document.getElementById('radio-' + id);
+  if (radio) radio.innerHTML = '<div style="width:10px;height:10px;border-radius:50%;background:var(--red);"></div>';
+}
+
+
+// ═══════════════════════════════════════════
+// MEDIAPIPE INIT
+// ═══════════════════════════════════════════
+async function initFaceMesh() {
+  if (fmReady) return;
+  if (typeof FaceMesh === 'undefined') throw new Error('FaceMesh not loaded');
+
+  faceMeshInst = new FaceMesh({
+    locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${f}`
+  });
+  faceMeshInst.setOptions({
+    maxNumFaces: 1,
+    refineLandmarks: true,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5
+  });
+  faceMeshInst.onResults(results => {
+    if (fmResultCb) { fmResultCb(results); }
+  });
+  await faceMeshInst.initialize();
+  fmReady = true;
+}
+
+
+// ═══════════════════════════════════════════
+// CAMERA
+// ═══════════════════════════════════════════
+async function startCamera() {
+  show('s-camera');
+  resetScan();
+
+  // Warm up FaceMesh while camera opens
+  initFaceMesh().catch(e => console.warn('FaceMesh init:', e));
+
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 960 } }
+    });
+    const vid = document.getElementById('videoEl');
+    vid.srcObject = camStream;
+    await vid.play();
+    startScanLoop();
+  } catch (e) {
+    showErr('Camera blocked. Make sure this page is served over https:// or use "Upload a Photo" instead.');
+    show('s-instructions');
+  }
+}
+
+function stopCamera() {
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
+}
+
+function resetScan() {
+  scanStep = 0; stableFrames = 0; captures = {}; capturedMain = null;
+  updateScanUI();
+}
+
+function captureCurrentFrame(label) {
+  const vid = document.getElementById('videoEl');
+  const cv  = document.getElementById('hiddenCanvas');
+  cv.width  = vid.videoWidth;
+  cv.height = vid.videoHeight;
+  const ctx = cv.getContext('2d');
+  ctx.save();
+  if (label === 'front') {
+    // Mirror front-facing selfie so it looks natural
+    ctx.translate(cv.width, 0);
+    ctx.scale(-1, 1);
+  }
+  ctx.drawImage(vid, 0, 0);
+  ctx.restore();
+  const dataUrl = cv.toDataURL('image/jpeg', 0.88);
+  captures[label] = dataUrl;
+  if (label === 'front') capturedMain = dataUrl;
+}
+
+
+// ═══════════════════════════════════════════
+// LIVE SCAN LOOP
+// ═══════════════════════════════════════════
+function getFaceRotation(lm) {
+  // Rotation = how far nose deviates from face midpoint (normalised to face half-width)
+  // Negative = turned left (from user perspective), Positive = turned right
+  const lx = lm[234].x, rx = lm[454].x;
+  const midX = (lx + rx) / 2;
+  const noseX = lm[4].x;
+  const halfW = Math.abs(rx - lx) / 2;
+  return halfW > 0 ? (noseX - midX) / halfW : 0;
+}
+
+function isCorrectAngle(step, rotation) {
+  if (step === 0) return Math.abs(rotation) < 0.14;   // straight
+  if (step === 1) return rotation < -0.22;             // turned left
+  if (step === 2) return rotation > 0.22;              // turned right
+  return false;
+}
+
+function startScanLoop() {
+  const vid = document.getElementById('videoEl');
+  if (!fmReady || !faceMeshInst) {
+    // Wait for FaceMesh to be ready
+    rafId = requestAnimationFrame(startScanLoop);
+    return;
+  }
+
+  async function loop() {
+    if (!camStream || scanStep >= 3) return;
+
+    if (!isProcessing && vid.readyState >= 2) {
+      isProcessing = true;
+      fmResultCb = (results) => {
+        isProcessing = false;
+        if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
+          stableFrames = Math.max(0, stableFrames - 3);
+          setOvalGood(false);
+          updateProgress(stableFrames / STABLE_REQ[scanStep]);
+          return;
+        }
+        const lm = results.multiFaceLandmarks[0];
+        const rot = getFaceRotation(lm);
+        const ok  = isCorrectAngle(scanStep, rot);
+
+        if (ok) {
+          stableFrames++;
+          setOvalGood(true);
+          updateProgress(stableFrames / STABLE_REQ[scanStep]);
+          if (stableFrames >= STABLE_REQ[scanStep]) {
+            const labels = ['front','left','right'];
+            captureCurrentFrame(labels[scanStep]);
+            stableFrames = 0;
+            scanStep++;
+            if (scanStep >= 3) {
+              stopCamera();
+              runAnalysis();
+            } else {
+              updateScanUI();
+            }
+          }
+        } else {
+          stableFrames = Math.max(0, stableFrames - 1);
+          setOvalGood(false);
+          updateProgress(stableFrames / STABLE_REQ[scanStep]);
+        }
+      };
+      try {
+        await faceMeshInst.send({ image: vid });
+      } catch (e) {
+        isProcessing = false;
+      }
+    }
+
+    rafId = requestAnimationFrame(loop);
+  }
+
+  rafId = requestAnimationFrame(loop);
+}
+
+function setOvalGood(good) {
+  const oval = document.getElementById('faceOval');
+  if (oval) { good ? oval.classList.add('good') : oval.classList.remove('good'); }
+}
+
+function updateProgress(ratio) {
+  const bar = document.getElementById('scanProgress');
+  if (bar) {
+    bar.style.width = Math.min(100, ratio * 100) + '%';
+    bar.classList.toggle('good', ratio >= 1);
+  }
+}
+
+function updateScanUI() {
+  document.getElementById('scanInstruction').textContent = INSTRUCTIONS[scanStep] || '';
+  document.getElementById('scanHint').textContent = HINTS[scanStep] || '';
+  updateProgress(0);
+  setOvalGood(false);
+
+  for (let i = 0; i < 3; i++) {
+    const dot = document.getElementById('sdot-' + i);
+    if (!dot) continue;
+    dot.classList.remove('active','done','pending');
+    if (i < scanStep)      dot.classList.add('done'), dot.innerHTML = '✓';
+    else if (i === scanStep) dot.classList.add('active'), dot.innerHTML = String(i+1);
+    else                   dot.classList.add('pending'), dot.innerHTML = String(i+1);
+  }
+}
+
+
+// ═══════════════════════════════════════════
+// UPLOAD FALLBACK
+// ═══════════════════════════════════════════
+function handleUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    capturedMain = ev.target.result;
+    captures.front = ev.target.result;
+    runAnalysis();
+  };
+  reader.readAsDataURL(file);
+}
+
+
+// ═══════════════════════════════════════════
+// ANALYSIS
+// ═══════════════════════════════════════════
+async function runAnalysis() {
+  show('s-analysing');
+  if (capturedMain) document.getElementById('thumbImg').src = capturedMain;
+
+  // Animate step list
+  const rows = document.querySelectorAll('#stepList .step-item-row');
+  rows.forEach((r, i) => setTimeout(() => r.classList.add('lit'), i * 650));
+
+  const minWait = new Promise(r => setTimeout(r, 2600));
+  let analysis;
+
+  try {
+    if (!fmReady) await initFaceMesh();
+    const results = await new Promise((resolve, reject) => {
+      fmResultCb = resolve;
+      const img = new Image();
+      img.onload = () => faceMeshInst.send({ image: img }).catch(reject);
+      img.onerror = reject;
+      img.src = captures.front || capturedMain;
+      setTimeout(() => { fmResultCb = null; reject(new Error('timeout')); }, 12000);
+    });
+
+    if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+      analysis = computeAnalysis(results.multiFaceLandmarks[0]);
+    } else {
+      analysis = fallbackAnalysis(true);
+    }
+  } catch (e) {
+    console.warn('Analysis failed, using fallback:', e);
+    analysis = fallbackAnalysis(false);
+  }
+
+  // Additional nose prominence from profile captures
+  if (captures.left || captures.right) {
+    analysis.hasProfileData = true;
+  }
+
+  await minWait;
+  renderResults(analysis);
+  show('s-results');
+}
+
+function computeAnalysis(lm) {
+  // Iris centres (requires refineLandmarks)
+  const lx = lm[468].x, ly = lm[468].y;
+  const rx = lm[473].x, ry = lm[473].y;
+
+  const faceW = Math.abs(lm[454].x - lm[234].x);
+  const faceH = Math.abs(lm[152].y - lm[10].y);
+  const eyeCY = (ly + ry) / 2;
+  const ipd   = Math.abs(rx - lx);
+
+  const ipdRatio   = ipd / faceW;
+  const eyeHRatio  = (eyeCY - lm[10].y) / faceH;
+  const faceShapeR = faceW / faceH;
+
+  // Nose bridge prominence: distance from nose tip to eye-center line, normalised
+  const noseTipY  = lm[4].y;
+  const noseRatio = Math.abs(noseTipY - eyeCY) / faceH;
+
+  return {
+    real: true,
+    ipdRatio,
+    eyeHRatio,
+    faceShapeR,
+    noseRatio,
+    ipdCat:    ipdRatio < 0.46 ? 'narrow' : ipdRatio > 0.54 ? 'wide' : 'average',
+    eyePos:    eyeHRatio < 0.38 ? 'high'   : eyeHRatio > 0.46 ? 'low'  : 'centered',
+    faceShape: faceShapeR > 0.72 ? 'round'  : faceShapeR > 0.60 ? 'oval' : 'long',
+    noseBridge: noseRatio < 0.25 ? 'low' : noseRatio > 0.35 ? 'high' : 'average',
+    hasProfileData: false
+  };
+}
+
+function fallbackAnalysis(noFace) {
+  return {
+    real: false, noFace,
+    ipdRatio: 0.50, eyeHRatio: 0.42, faceShapeR: 0.65, noseRatio: 0.30,
+    ipdCat: 'average', eyePos: 'centered', faceShape: 'oval', noseBridge: 'average',
+    hasProfileData: false
+  };
+}
+
+
+// ═══════════════════════════════════════════
+// MASK DIAGRAM SVG
+// ═══════════════════════════════════════════
+function buildMaskDiagram(analysis) {
+  const W = 360, H = 170;
+  const maskCY = 82;   // vertical centre of mask face-contact area
+
+  // Cup centres based on IPD category
+  // Each cup display radius: rx=38, ry=30
+  const CUP_RX = 38, CUP_RY = 30;
+  const centres = {
+    narrow:  { lx: 162, rx_: 198 },  // 36px apart (cups almost touching)
+    average: { lx: 150, rx_: 210 },  // 60px apart
+    wide:    { lx: 136, rx_: 224 }   // 88px apart
+  };
+
+  // Vertical offset based on eye position
+  const cyOffset = { high: -8, centered: 0, low: 8 };
+
+  const { lx, rx_ } = centres[analysis.ipdCat];
+  const cy = maskCY + (cyOffset[analysis.eyePos] || 0);
+  const midX = W / 2;
+
+  // Cup gap label
+  const gapLabels = {
+    narrow:  '← Cups closer together →',
+    average: '← Cups at default position →',
+    wide:    '← Cups wider apart →'
+  };
+
+  // Vertical arrow
+  const vertArrow = analysis.eyePos === 'high'
+    ? `<text x="${midX+85}" y="${cy-6}" text-anchor="middle" fill="#818cf8" font-size="11" font-family="Montserrat,sans-serif" font-weight="600">▲ higher</text>`
+    : analysis.eyePos === 'low'
+    ? `<text x="${midX+85}" y="${cy+14}" text-anchor="middle" fill="#818cf8" font-size="11" font-family="Montserrat,sans-serif" font-weight="600">▼ lower</text>`
+    : '';
+
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;">
+    <!-- Mask body -->
+    <ellipse cx="${midX}" cy="${maskCY}" rx="152" ry="68" fill="#242424" stroke="#383838" stroke-width="1.5"/>
+
+    <!-- Strap ends -->
+    <rect x="0" y="${maskCY-18}" width="14" height="36" rx="7" fill="#1e1e1e" stroke="#2e2e2e" stroke-width="1"/>
+    <rect x="${W-14}" y="${maskCY-18}" width="14" height="36" rx="7" fill="#1e1e1e" stroke="#2e2e2e" stroke-width="1"/>
+
+    <!-- Nose bridge dip -->
+    <ellipse cx="${midX}" cy="${maskCY+62}" rx="16" ry="10" fill="#161616"/>
+
+    <!-- Cup shadows -->
+    <ellipse cx="${lx}" cy="${cy}" rx="${CUP_RX+5}" ry="${CUP_RY+4}" fill="#1a1a1a"/>
+    <ellipse cx="${rx_}" cy="${cy}" rx="${CUP_RX+5}" ry="${CUP_RY+4}" fill="#1a1a1a"/>
+
+    <!-- Cup recommended zones (highlighted) -->
+    <ellipse cx="${lx}" cy="${cy}" rx="${CUP_RX}" ry="${CUP_RY}" fill="rgba(255,88,89,0.14)" stroke="#FF5859" stroke-width="2.5"/>
+    <ellipse cx="${rx_}" cy="${cy}" rx="${CUP_RX}" ry="${CUP_RY}" fill="rgba(255,88,89,0.14)" stroke="#FF5859" stroke-width="2.5"/>
+
+    <!-- Inner cup detail (eye opening area — 52x40mm scaled) -->
+    <ellipse cx="${lx}" cy="${cy}" rx="${CUP_RX-14}" ry="${CUP_RY-11}" fill="#1a1a1a" stroke="#3a3a3a" stroke-width="1"/>
+    <ellipse cx="${rx_}" cy="${cy}" rx="${CUP_RX-14}" ry="${CUP_RY-11}" fill="#1a1a1a" stroke="#3a3a3a" stroke-width="1"/>
+
+    <!-- Cup centre dots -->
+    <circle cx="${lx}" cy="${cy}" r="3.5" fill="#FF5859"/>
+    <circle cx="${rx_}" cy="${cy}" r="3.5" fill="#FF5859"/>
+
+    <!-- Spacing bracket -->
+    <line x1="${lx+CUP_RX+3}" y1="${cy-42}" x2="${rx_-CUP_RX-3}" y2="${cy-42}" stroke="#FF5859" stroke-width="1.2" stroke-dasharray="3 2.5"/>
+    <line x1="${lx+CUP_RX}" y1="${cy-46}" x2="${lx+CUP_RX}" y2="${cy-38}" stroke="#FF5859" stroke-width="1.8"/>
+    <line x1="${rx_-CUP_RX}" y1="${cy-46}" x2="${rx_-CUP_RX}" y2="${cy-38}" stroke="#FF5859" stroke-width="1.8"/>
+
+    <!-- Spacing label -->
+    <text x="${midX}" y="${cy-50}" text-anchor="middle" fill="#FF5859" font-size="10" font-family="Montserrat,sans-serif" font-weight="600">${gapLabels[analysis.ipdCat]}</text>
+
+    ${vertArrow}
+  </svg>`;
+}
+
+
+// ═══════════════════════════════════════════
+// RESULTS
+// ═══════════════════════════════════════════
+function renderResults(a) {
+  const shapeLabels = { round:'Round', oval:'Oval', long:'Long' };
+  const ipdLabels   = { narrow:'close-set eyes', average:'average eye spacing', wide:'wide-set eyes' };
+  document.getElementById('faceSummary').textContent =
+    `${shapeLabels[a.faceShape]} face · ${ipdLabels[a.ipdCat]}${a.real ? '' : ' (estimated)'}`;
+
+  // Mask diagram
+  document.getElementById('maskDiagram').innerHTML = buildMaskDiagram(a);
+
+  const gapDescs = {
+    narrow:  'Cups slid closer together than default',
+    average: 'Cups at default centre position',
+    wide:    'Cups slid wider than default'
+  };
+  const heightDescs = {
+    high:     'Position the mask slightly higher on your face',
+    centered: 'Standard height position',
+    low:      'Position the mask slightly lower on your face'
+  };
+  document.getElementById('diagramCaption').textContent =
+    `${gapDescs[a.ipdCat]} · ${heightDescs[a.eyePos]}`;
+
+  // Recs
+  const list = document.getElementById('recList');
+  list.innerHTML = '';
+  getRecommendations(a).forEach(rec => {
+    const div = document.createElement('div');
+    div.className = 'rec-card';
+    div.innerHTML = `
+      <div class="rec-icon">${rec.icon}</div>
+      <div>
+        <p class="rec-title">${rec.title}</p>
+        <p class="rec-text">${rec.text}</p>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+function getRecommendations(a) {
+  const recs = [];
+
+  recs.push({
+    icon: '↔️',
+    title: 'Eye Cup Spacing',
+    text: {
+      narrow:  'Slide both cups 1–2 clicks inward from the default centre so they sit directly over your pupils.',
+      average: 'Start at the default centre position — your eye spacing is close to the ideal baseline.',
+      wide:    'Slide both cups 1–2 clicks outward from centre until they sit flush over each eye socket.'
+    }[a.ipdCat]
+  });
+
+  recs.push({
+    icon: '↕️',
+    title: 'Height & Angle',
+    text: {
+      high:     'Wear the mask a little lower than feels natural, or tilt the strap slightly upward at the back.',
+      centered: 'Default height is ideal — cups should sit centred over each eye socket.',
+      low:      'Wear the mask slightly higher, or angle the strap downward at the back so the cups lift.'
+    }[a.eyePos]
+  });
+
+  recs.push({
+    icon: '🎯',
+    title: 'Strap Tension',
+    text: {
+      round: 'Loosen 2–3 notches from snug, then re-tighten slowly until the mask lies flat with no arching.',
+      oval:  'Tighten until the mask stays put when you turn your head — snug but no pressure points.',
+      long:  'Go 1 notch firmer than comfortable, keep the strap mid-skull (not low on the neck).'
+    }[a.faceShape]
+  });
+
+  recs.push({
+    icon: '✅',
+    title: 'Final Check',
+    text: 'Cup your hands over the mask in a dark room and scan for light at the nose bridge, outer corners, and below the brow.'
+  });
+
+  return recs;
+}
+
+
+// ═══════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════
+function showErr(msg) {
+  const t = document.getElementById('errToast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 5000);
+}
+
+
+// ═══════════════════════════════════════════
+// EVENT WIRING
+// ═══════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('startBtn').addEventListener('click', () => show('s-select'));
+  document.getElementById('selectBack').addEventListener('click', () => show('s-welcome'));
+  document.getElementById('selectContinue').addEventListener('click', () => show('s-instructions'));
+  document.getElementById('instructBack').addEventListener('click', () => show('s-select'));
+
+  document.getElementById('openCameraBtn').addEventListener('click', startCamera);
+  document.getElementById('uploadBtn').addEventListener('click', () => document.getElementById('fileInput').click());
+  document.getElementById('fileInput').addEventListener('change', handleUpload);
+
+  document.getElementById('cameraCancel').addEventListener('click', () => {
+    stopCamera();
+    resetScan();
+    show('s-instructions');
+  });
+
+  document.getElementById('retakeBtn').addEventListener('click', () => {
+    captures = {}; capturedMain = null;
+    show('s-instructions');
+  });
+  document.getElementById('restartBtn').addEventListener('click', () => {
+    captures = {}; capturedMain = null;
+    selectedMask = 'original';
+    show('s-welcome');
+  });
+
+  // Pre-warm FaceMesh in background
+  if (typeof FaceMesh !== 'undefined') {
+    initFaceMesh().catch(e => console.warn('FaceMesh pre-warm:', e));
+  }
+});
+</script>
+</body>
+</html>
