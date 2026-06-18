@@ -305,7 +305,7 @@
           font-family:'Poppins',sans-serif;font-weight:700;font-size:13px;color:var(--red);">1</div>
         <div style="padding-top:6px;">
           <p style="font-family:'Poppins',sans-serif;font-weight:700;font-size:14px;margin-bottom:2px;">Look straight ahead</p>
-          <p style="color:var(--muted);font-size:13px;">Face centred, eyes open, glasses off</p>
+          <p style="color:var(--muted);font-size:13px;">Face centred, eyes open — remove glasses first</p>
         </div>
       </div>
     </div>
@@ -371,11 +371,7 @@
   <div class="page pt pb" style="display:flex;flex-direction:column;gap:20px;">
 
     <div>
-      <div id="glassesWarn" style="display:none;background:#fff3cd;border:1px solid #f5c842;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#7a5c00;font-family:Montserrat,sans-serif;">
-        <strong>Glasses detected.</strong> Remove glasses and scan again for the most accurate result.
-        <button onclick="show('s-instructions')" style="background:none;border:none;color:#c54040;font-weight:700;cursor:pointer;padding:0;margin-left:6px;font-size:13px;">Retake →</button>
-      </div>
-      <div style="margin-bottom:12px;"><span class="badge">Fit profile ready</span></div>
+<div style="margin-bottom:12px;"><span class="badge">Fit profile ready</span></div>
       <h2 style="font-size:26px;font-weight:800;margin-bottom:4px;">Place your cups here.</h2>
       <p id="maskLabel" style="color:var(--red);font-size:11px;font-weight:700;font-family:'Poppins',sans-serif;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px;"></p>
       <p id="faceSummary" style="color:var(--muted);font-size:14px;"></p>
@@ -384,7 +380,7 @@
     <!-- Mask diagram -->
     <div class="diagram-wrap">
       <div id="maskDiagram"></div>
-      <p id="measDebug" style="color:rgba(0,0,0,0.45);font-size:10px;text-align:center;margin:4px 0 0;letter-spacing:0.2px;font-family:Montserrat,sans-serif;"></p>
+      <p id="measDebug" style="color:var(--muted);font-size:10px;text-align:center;margin:4px 0 0;letter-spacing:0.2px;font-family:Montserrat,sans-serif;"></p>
     </div>
 
     <!-- Three recommendation cards -->
@@ -648,11 +644,7 @@ function runAnalysis() {
   doAnalysis().then(function(results) {
     var lms = results.multiFaceLandmarks;
     if (lms && lms.length) {
-      var computed = compute(lms[0]);
-      return checkGlasses(captures.front || thumbUrl, lms[0]).then(function(glassesDetected) {
-        computed.glassesWarning = glassesDetected;
-        return computed;
-      });
+      return compute(lms[0]);
     }
     return fallback(true);
   }).then(function(result) {
@@ -873,10 +865,6 @@ function renderResults(a) {
     ipdSummary[a.ipdCat] + heightSummary[a.eyePos] + (a.real ? '' : ' (estimated)');
 
   document.getElementById('maskDiagram').innerHTML = buildDiagram(a, a.maskId);
-
-  // Glasses warning banner
-  var gwarn = document.getElementById('glassesWarn');
-  if (gwarn) gwarn.style.display = a.glassesWarning ? 'block' : 'none';
 
   // Raw measurements
   var dbg = document.getElementById('measDebug');
