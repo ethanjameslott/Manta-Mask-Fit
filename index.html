@@ -240,22 +240,23 @@
         </div>
       </div>
 
-      <div class="mcard off">
+      <div class="mcard" id="card-pro" onclick="selectMask('pro',this)">
         <div style="display:flex;align-items:center;gap:14px;">
-          <div style="width:46px;height:46px;border-radius:12px;background:var(--surf2);
+          <div style="width:46px;height:46px;border-radius:12px;background:var(--surf2);border:1px solid var(--border);
             display:flex;align-items:center;justify-content:center;flex-shrink:0;">
             <svg width="28" height="18" viewBox="0 0 40 22" fill="none">
-              <rect x="0" y="8" width="40" height="6" rx="3" fill="#555"/>
-              <ellipse cx="13" cy="11" rx="7" ry="6" fill="#555"/>
-              <ellipse cx="27" cy="11" rx="7" ry="6" fill="#555"/>
+              <rect x="0" y="8" width="40" height="6" rx="3" fill="rgba(255,88,89,.4)"/>
+              <ellipse cx="13" cy="11" rx="7.5" ry="6.5" fill="var(--red)"/>
+              <ellipse cx="27" cy="11" rx="7.5" ry="6.5" fill="var(--red)"/>
             </svg>
           </div>
           <div style="flex:1;">
             <div style="display:flex;align-items:center;justify-content:space-between;">
               <span style="font-family:'Poppins',sans-serif;font-weight:700;font-size:15px;">Manta PRO</span>
-              <span style="font-size:11px;background:var(--surf2);color:var(--muted);padding:3px 10px;border-radius:100px;border:1px solid var(--border);">Soon</span>
+              <div id="radio-pro" style="width:20px;height:20px;border-radius:50%;border:2px solid var(--border);
+                display:flex;align-items:center;justify-content:center;"></div>
             </div>
-            <p style="color:var(--muted);font-size:12px;margin-top:3px;">Deep-dip cups · Maximum blackout</p>
+            <p style="color:var(--muted);font-size:12px;margin-top:3px;">C-shaped cups · Deep blackout</p>
           </div>
         </div>
       </div>
@@ -294,13 +295,7 @@
     <div>
       <button class="back" id="instructBack">← Back</button>
 
-      <div style="display:flex;gap:6px;margin-top:20px;margin-bottom:28px;">
-        <div style="height:3px;border-radius:2px;background:var(--red);flex:1;"></div>
-        <div style="height:3px;border-radius:2px;background:var(--border);flex:1;"></div>
-        <div style="height:3px;border-radius:2px;background:var(--border);flex:1;"></div>
-      </div>
-
-      <h2 style="font-size:22px;font-weight:700;margin-bottom:24px;">3-step face scan</h2>
+      <h2 style="font-size:22px;font-weight:700;margin-top:20px;margin-bottom:24px;">Quick face scan</h2>
     </div>
 
     <div style="flex:1;display:flex;flex-direction:column;gap:18px;">
@@ -310,25 +305,7 @@
           font-family:'Poppins',sans-serif;font-weight:700;font-size:13px;color:var(--red);">1</div>
         <div style="padding-top:6px;">
           <p style="font-family:'Poppins',sans-serif;font-weight:700;font-size:14px;margin-bottom:2px;">Look straight ahead</p>
-          <p style="color:var(--muted);font-size:13px;">Face centred, eyes open</p>
-        </div>
-      </div>
-      <div style="display:flex;gap:14px;">
-        <div style="width:32px;height:32px;border-radius:50%;background:var(--surf2);border:1.5px solid var(--border);
-          display:flex;align-items:center;justify-content:center;flex-shrink:0;
-          font-family:'Poppins',sans-serif;font-weight:700;font-size:13px;color:var(--muted);">2</div>
-        <div style="padding-top:6px;">
-          <p style="font-family:'Poppins',sans-serif;font-weight:700;font-size:14px;margin-bottom:2px;">Turn slowly left</p>
-          <p style="color:var(--muted);font-size:13px;">About 30° — auto-captured</p>
-        </div>
-      </div>
-      <div style="display:flex;gap:14px;">
-        <div style="width:32px;height:32px;border-radius:50%;background:var(--surf2);border:1.5px solid var(--border);
-          display:flex;align-items:center;justify-content:center;flex-shrink:0;
-          font-family:'Poppins',sans-serif;font-weight:700;font-size:13px;color:var(--muted);">3</div>
-        <div style="padding-top:6px;">
-          <p style="font-family:'Poppins',sans-serif;font-weight:700;font-size:14px;margin-bottom:2px;">Then turn right</p>
-          <p style="color:var(--muted);font-size:13px;">Mirror of step 2 — done</p>
+          <p style="color:var(--muted);font-size:13px;">Face centred, eyes open, glasses off</p>
         </div>
       </div>
     </div>
@@ -351,15 +328,8 @@
   <div style="position:absolute;top:0;left:0;right:0;
     padding:max(52px,env(safe-area-inset-top,52px)) 20px 16px;
     background:linear-gradient(to bottom,rgba(0,0,0,.65),transparent);pointer-events:none;">
-    <div style="pointer-events:all;margin-bottom:14px;">
+    <div style="pointer-events:all;">
       <button class="back" id="cameraCancel" style="color:rgba(247,245,240,.65);">✕ Cancel</button>
-    </div>
-    <div style="display:flex;justify-content:center;align-items:center;gap:10px;">
-      <div class="sdot act" id="sdot-0">1</div>
-      <div style="width:22px;height:1px;background:var(--border);"></div>
-      <div class="sdot pend" id="sdot-1">2</div>
-      <div style="width:22px;height:1px;background:var(--border);"></div>
-      <div class="sdot pend" id="sdot-2">3</div>
     </div>
   </div>
 
@@ -401,15 +371,20 @@
   <div class="page pt pb" style="display:flex;flex-direction:column;gap:20px;">
 
     <div>
+      <div id="glassesWarn" style="display:none;background:#fff3cd;border:1px solid #f5c842;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#7a5c00;font-family:Montserrat,sans-serif;">
+        <strong>Glasses detected.</strong> Remove glasses and scan again for the most accurate result.
+        <button onclick="show('s-instructions')" style="background:none;border:none;color:#c54040;font-weight:700;cursor:pointer;padding:0;margin-left:6px;font-size:13px;">Retake →</button>
+      </div>
       <div style="margin-bottom:12px;"><span class="badge">Fit profile ready</span></div>
       <h2 style="font-size:26px;font-weight:800;margin-bottom:4px;">Place your cups here.</h2>
+      <p id="maskLabel" style="color:var(--red);font-size:11px;font-weight:700;font-family:'Poppins',sans-serif;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px;"></p>
       <p id="faceSummary" style="color:var(--muted);font-size:14px;"></p>
     </div>
 
     <!-- Mask diagram -->
     <div class="diagram-wrap">
       <div id="maskDiagram"></div>
-      <p id="measDebug" style="color:rgba(0,0,0,0.22);font-size:10px;text-align:center;margin:4px 0 0;letter-spacing:0.2px;font-family:Montserrat,sans-serif;"></p>
+      <p id="measDebug" style="color:rgba(0,0,0,0.45);font-size:10px;text-align:center;margin:4px 0 0;letter-spacing:0.2px;font-family:Montserrat,sans-serif;"></p>
     </div>
 
     <!-- Three recommendation cards -->
@@ -434,15 +409,58 @@ var fmInst       = null;
 var fmReady      = false;
 var isProc       = false;
 var rafId        = null;
-var scanStep     = 0;
 var stableN      = 0;
 var captures     = {};
 var thumbUrl     = null;
 var fmCb         = null;
 var scanReady    = false;
+var scanDone     = false;
 
-var STABLE = [60, 35, 35];
-var INSTRS = ['Look straight ahead', 'Slowly turn left', 'Now turn right'];
+var STABLE_FRAMES = 60;
+
+// ── Per-mask configuration ──────────────────────────────────────
+var MASK_CONFIG = {
+  original: {
+    label: 'Manta Sleep Mask',
+    cupRx: 44, cupRy: 38,           // outer foam radii in SVG px (≈88×75mm)
+    midRx: 34, midRy: 29,           // mid groove
+    innerRx: 24, innerRy: 20,       // eye opening
+    halfSpacing: { narrow:57, average:67, wide:78 },
+    yOff: { high:-14, centered:0, low:13 },
+    spacingCopy: {
+      narrow:  'Place the cups so they almost touch — leave just a finger-width gap (about ¼ inch / 6mm) between them.',
+      average: 'Leave about ¾ inch (20mm) between the inner edges of the two cups.',
+      wide:    'Leave about 1½ inches (38mm) between the inner edges of the two cups.'
+    },
+    heightCopy: {
+      high:     'Slide both cups toward the TOP edge of the strap until they overhang it by about ½ inch (12mm).',
+      centered: 'Centre both cups on the strap — aim for equal overhang on the top and bottom edges.',
+      low:      'Slide both cups toward the BOTTOM edge (nose arch side) until they overhang it by about ½ inch (12mm).'
+    },
+    rotationCopy: 'The cups are slightly thicker on the inner (nose-facing) edge. Most people get the best seal by rotating each cup so that thick edge angles upward toward the brow — try about 10–15° and adjust until the foam sits flush all the way around.',
+    cShape: false
+  },
+  pro: {
+    label: 'Manta PRO Mask',
+    cupRx: 48, cupRy: 43,           // outer radii (≈95×83mm — slightly larger)
+    midRx: 37, midRy: 33,
+    innerRx: 26, innerRy: 22,
+    halfSpacing: { narrow:57, average:68, wide:80 },
+    yOff: { high:-14, centered:0, low:13 },
+    spacingCopy: {
+      narrow:  'Place the cups so they almost touch — leave just a finger-width gap (about ¼ inch / 6mm) between them.',
+      average: 'Leave about ¾ inch (20mm) between the inner edges of the two cups.',
+      wide:    'Leave about 1½ inches (38mm) between the inner edges of the two cups.'
+    },
+    heightCopy: {
+      high:     'Slide both cups toward the TOP edge of the strap until they overhang it by about ½ inch (12mm).',
+      centered: 'Centre both cups on the strap — aim for equal overhang on the top and bottom edges.',
+      low:      'Slide both cups toward the BOTTOM edge (nose arch side) until they overhang it by about ½ inch (12mm).'
+    },
+    rotationCopy: 'The PRO cup tapers toward the temple side — there is only one correct orientation. Attach each cup with the fuller (thicker) edge facing your nose and the flatter, tapered edge facing your temple. Double-check this before pressing the velcro down.',
+    cShape: true
+  }
+};
 
 // ── Navigation ─────────────────────────────────────────────────
 function show(id) {
@@ -501,8 +519,8 @@ function stopCam() {
 }
 
 function resetScan() {
-  scanStep = 0; stableN = 0; captures = {}; thumbUrl = null; scanReady = false;
-  updateCamUI();
+  stableN = 0; captures = {}; thumbUrl = null; scanReady = false; scanDone = false;
+  setProgBar(0); setOvalGo(false);
 }
 
 function grabFrame(label) {
@@ -529,29 +547,20 @@ function getRotation(lm) {
   return halfW > 0 ? (lm[4].x - midX) / halfW : 0;
 }
 
-function angleOk(step, rot) {
-  // Front camera raw frame is NOT mirrored:
-  //   User turns LEFT  → nose moves RIGHT in frame → rotation POSITIVE
-  //   User turns RIGHT → nose moves LEFT  in frame → rotation NEGATIVE
-  if (step === 0) return Math.abs(rot) < 0.14;   // facing forward
-  if (step === 1) return rot > 0.22;              // user's left turn
-  if (step === 2) return rot < -0.22;             // user's right turn
-  return false;
-}
 
 function startLoop() {
   var v = document.getElementById('videoEl');
-  // Give the user 1.8s to position their face before step 0 starts counting.
+  // 1.8s to get into position before counting starts
   scanReady = false;
   var el = document.getElementById('scanInstr');
   if (el) el.textContent = 'Fill your face in the oval…';
   setTimeout(function() {
     scanReady = true;
-    if (el) el.textContent = INSTRS[0];
+    if (el) el.textContent = 'Look straight ahead';
   }, 1800);
 
   function loop() {
-    if (!camStream || scanStep >= 3) return;
+    if (!camStream || scanDone) return;
     if (fmReady && !isProc && v.readyState >= 2) {
       isProc = true;
       fmCb = function(results) {
@@ -559,28 +568,22 @@ function startLoop() {
         var lms = results.multiFaceLandmarks;
         if (!lms || !lms.length) {
           if (scanReady) stableN = Math.max(0, stableN - 3);
-          setOvalGo(false); setProgBar(scanReady ? stableN / STABLE[scanStep] : 0);
+          setOvalGo(false); setProgBar(scanReady ? stableN / STABLE_FRAMES : 0);
           return;
         }
         var rot = getRotation(lms[0]);
-        if (angleOk(scanStep, rot) && scanReady) {
+        if (Math.abs(rot) < 0.14 && scanReady) {
           stableN++;
-          setOvalGo(true); setProgBar(stableN / STABLE[scanStep]);
-          if (stableN >= STABLE[scanStep]) {
-            var labels = ['front','left','right'];
-            grabFrame(labels[scanStep]);
-            stableN = 0; scanStep++;
-            if (scanStep >= 3) { stopCam(); runAnalysis(); }
-            else {
-              // Brief pause before counting begins on the next step
-              scanReady = false;
-              updateCamUI();
-              setTimeout(function(){ scanReady = true; }, 700);
-            }
+          setOvalGo(true); setProgBar(stableN / STABLE_FRAMES);
+          if (stableN >= STABLE_FRAMES) {
+            scanDone = true;
+            grabFrame('front');
+            stopCam();
+            runAnalysis();
           }
         } else {
           if (scanReady) stableN = Math.max(0, stableN - 1);
-          setOvalGo(false); setProgBar(scanReady ? stableN / STABLE[scanStep] : 0);
+          setOvalGo(false); setProgBar(scanReady ? stableN / STABLE_FRAMES : 0);
         }
       };
       fmInst.send({image: v}).catch(function(){ isProc = false; });
@@ -597,19 +600,6 @@ function setOvalGo(ok) {
 function setProgBar(ratio) {
   var b = document.getElementById('scanProg');
   if (b) { b.style.width = Math.min(100, ratio*100)+'%'; b.classList.toggle('go', ratio >= 1); }
-}
-function updateCamUI() {
-  var el = document.getElementById('scanInstr');
-  if (el) el.textContent = INSTRS[scanStep] || '';
-  setProgBar(0); setOvalGo(false);
-  for (var i=0;i<3;i++) {
-    var d = document.getElementById('sdot-'+i);
-    if (!d) continue;
-    d.className = 'sdot';
-    if (i < scanStep)       { d.classList.add('done'); d.innerHTML = '&#10003;'; }
-    else if (i === scanStep) { d.classList.add('act');  d.innerHTML = String(i+1); }
-    else                     { d.classList.add('pend'); d.innerHTML = String(i+1); }
-  }
 }
 
 // ── Upload fallback ────────────────────────────────────────────
@@ -657,11 +647,22 @@ function runAnalysis() {
 
   doAnalysis().then(function(results) {
     var lms = results.multiFaceLandmarks;
-    analysisResult = (lms && lms.length) ? compute(lms[0]) : fallback(true);
+    if (lms && lms.length) {
+      var computed = compute(lms[0]);
+      return checkGlasses(captures.front || thumbUrl, lms[0]).then(function(glassesDetected) {
+        computed.glassesWarning = glassesDetected;
+        return computed;
+      });
+    }
+    return fallback(true);
+  }).then(function(result) {
+    analysisResult = result;
+    analysisResult.maskId = selectedMask || 'original';
     analysisDone = true; tryFinish();
   }).catch(function(e) {
     console.warn('Analysis failed:', e);
     analysisResult = fallback(false);
+    analysisResult.maskId = selectedMask || 'original';
     analysisDone = true; tryFinish();
   });
 }
@@ -689,44 +690,62 @@ function compute(lm) {
   };
 }
 
+// Checks pixel brightness around iris landmarks to spot glasses/obstructions
+function checkGlasses(imageUrl, lm) {
+  return new Promise(function(resolve) {
+    var img = new Image();
+    img.onload = function() {
+      try {
+        var cv = document.createElement('canvas');
+        cv.width = img.width; cv.height = img.height;
+        var ctx = cv.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        function regionStats(nx, ny) {
+          var cx = Math.round(nx * img.width);
+          var cy = Math.round(ny * img.height);
+          var r = Math.max(8, Math.round(0.032 * img.width));
+          var x0 = Math.max(0, cx-r), y0 = Math.max(0, cy-r);
+          var w = Math.min(r*2, img.width-x0), h = Math.min(r*2, img.height-y0);
+          if (w <= 0 || h <= 0) return { mean:80, variance:100 };
+          var d = ctx.getImageData(x0, y0, w, h).data;
+          var vals = [];
+          for (var i=0; i<d.length; i+=4) vals.push((d[i]+d[i+1]+d[i+2])/3);
+          var mean = vals.reduce(function(a,b){ return a+b; },0)/vals.length;
+          var variance = vals.reduce(function(a,b){ return a+(b-mean)*(b-mean); },0)/vals.length;
+          return { mean:mean, variance:variance };
+        }
+        var ls = regionStats(lm[468].x, lm[468].y);
+        var rs = regionStats(lm[473].x, lm[473].y);
+        // Bright mean = lens glare; high variance = frame edges across iris
+        var glasses = ls.mean > 160 || rs.mean > 160 || ls.variance > 1100 || rs.variance > 1100;
+        resolve(glasses);
+      } catch(e) { resolve(false); }
+    };
+    img.onerror = function(){ resolve(false); };
+    img.src = imageUrl;
+  });
+}
+
 function fallback(noFace) {
   return { real:false, noFace:noFace, ipdR:.50, eyeHR:.42, noseR:.31,
     ipdCat:'average', eyePos:'centered', faceShape:'oval', noseBridge:'average' };
 }
 
 // ── Mask Diagram ───────────────────────────────────────────────
-// Scale: ~1.23px per mm. Face zone: 200mm wide × 70mm tall.
-// Cup: 88mm wide × 75mm tall (88×1.23=108px diam, 75×1.23=92px diam)
-// Showing ONLY the face zone + 25px strap tails — no long strap ends.
-// Warm off-white background for contrast against the near-black strap.
-// Cups in Manta red tones to stand out from the strap.
-function buildDiagram(a) {
-  var W = 320, H = 185;
-  var CX = 160; // horizontal centre
+function buildDiagram(a, maskId) {
+  var mc = MASK_CONFIG[maskId] || MASK_CONFIG.original;
+  var W = 320, H = 190;
+  var CX = 160;
 
-  // ── Horizontal cup positions (based on IPD category)
-  // At 1.23px/mm, cup outer radius = 54px. Gap at each setting:
-  //   narrow:  5mm ≈ 6px → cups barely apart
-  //   average: 20mm ≈ 25px → ~¾ inch
-  //   wide:    38mm ≈ 47px → ~1½ inches
-  var halfSpacing = { narrow: 57, average: 67, wide: 78 };
-  var hs = halfSpacing[a.ipdCat] || 67;
-  var lx = CX - hs;
-  var rx = CX + hs;
+  var hs = mc.halfSpacing[a.ipdCat] || mc.halfSpacing.average;
+  var lx = CX - hs, rx = CX + hs;
+  var yBase = 88;
+  var cy = yBase + (mc.yOff[a.eyePos] || 0);
+  var orx = mc.cupRx, ory = mc.cupRy;
+  var mrx = mc.midRx, mry = mc.midRy;
+  var irx = mc.innerRx, iry = mc.innerRy;
 
-  // ── Vertical cup position
-  var yBase = 88;  // centre of face zone (y=53 top, y=125 bottom → mid=89)
-  var yOff = { high: -14, centered: 0, low: 13 };
-  var cy = yBase + (yOff[a.eyePos] || 0);
-
-  // ── Cup oval radii (88×75mm proportions)
-  var orx = 44, ory = 38;   // outer foam ring
-  var mrx = 34, mry = 29;   // mid groove
-  var irx = 24, iry = 20;   // inner eye opening
-
-  // ── Strap path — zoomed face zone only, correct butterfly shape
-  // Top edge: gentle arch. Bottom: deeper curve with nose bridge notch.
-  // Face zone: x=27→293, top y=53, bottom y=125. Strap tails x=10→27 and x=293→310.
+  // Strap path — butterfly shape with nose arch
   var sp = [
     'M 10,82', 'C 20,82 24,53 45,53',
     'L 275,53', 'C 296,53 300,82 310,82',
@@ -738,8 +757,9 @@ function buildDiagram(a) {
     'Z'
   ].join(' ');
 
-  // ── Ghost cups: default (average/centred) as reference
-  var gLx = CX - 67, gRx = CX + 67, gCy = yBase;
+  // Ghost cups (average/centred reference)
+  var ghs = mc.halfSpacing.average;
+  var gLx = CX - ghs, gRx = CX + ghs, gCy = yBase;
   var showGhost = (a.ipdCat !== 'average' || a.eyePos !== 'centered');
   var ghostSVG = showGhost ? (
     '<ellipse cx="' + gLx + '" cy="' + gCy + '" rx="' + (orx+4) + '" ry="' + (ory+4) + '"' +
@@ -748,17 +768,60 @@ function buildDiagram(a) {
       ' fill="none" stroke="rgba(200,80,80,0.18)" stroke-width="1.5" stroke-dasharray="5 4"/>'
   ) : '';
 
-  // ── Cup renderer: Manta-red toned donut with 3D depth
-  function cup(x, y) {
-    var hlx = x - orx * 0.22, hly = y - ory * 0.3;
+  // D-shape path for PRO cups: full-radius on nose side, tapered on temple side
+  // noseRight=true → nose is at +x (left cup); false → nose at −x (right cup)
+  function dPath(cx, cy, rx, ry, noseRight) {
+    var n = noseRight ? 1 : -1;
+    var ns  = n * rx,          ts  = -n * rx * 0.68;
+    var nk  = n * rx * 0.75,   tk  = -n * rx * 0.42;
+    return ['M', cx, cy-ry,
+      'C', cx+nk, cy-ry,       cx+ns, cy-ry*0.5,  cx+ns, cy,
+      'C', cx+ns, cy+ry*0.5,   cx+nk, cy+ry,      cx, cy+ry,
+      'C', cx+tk, cy+ry,       cx+ts, cy+ry*0.5,  cx+ts, cy,
+      'C', cx+ts, cy-ry*0.5,   cx+tk, cy-ry,      cx, cy-ry, 'Z'
+    ].join(' ');
+  }
+
+  // Build cup SVG strings (defs accumulated separately so they go into the top-level <defs>)
+  var cupDefs = '';
+  function cup(x, y, isLeft) {
+    if (mc.cShape) {
+      // PRO — D-shaped, tapered toward temple
+      var noseRight = isLeft;
+      var cid = 'cc' + Math.round(x);
+      cupDefs += '<clipPath id="' + cid + '"><path d="' + dPath(x, y, orx, ory, noseRight) + '"/></clipPath>';
+      var hlx = isLeft ? x + orx*0.18 : x - orx*0.18, hly = y - ory*0.3;
+      return (
+        '<path d="' + dPath(x+3, y+4, orx+2, ory+2, noseRight) + '" fill="rgba(0,0,0,0.28)"/>' +
+        '<path d="' + dPath(x, y, orx, ory, noseRight) + '" fill="url(#dFoam)"/>' +
+        '<g clip-path="url(#' + cid + ')">' +
+          '<path d="' + dPath(x, y, mrx, mry, noseRight) + '" fill="url(#dGroove)"/>' +
+          '<ellipse cx="' + x + '" cy="' + y + '" rx="' + irx + '" ry="' + iry + '" fill="url(#dWell)"/>' +
+          '<ellipse cx="' + hlx + '" cy="' + hly + '" rx="' + (orx*0.28) + '" ry="' + (ory*0.2) + '" fill="rgba(255,160,160,0.12)"/>' +
+        '</g>'
+      );
+    }
+    // Original — full oval donut
+    var hlx2 = x - orx*0.22, hly2 = y - ory*0.3;
     return (
       '<ellipse cx="' + (x+3) + '" cy="' + (y+4) + '" rx="' + (orx+2) + '" ry="' + (ory+2) + '" fill="rgba(0,0,0,0.28)"/>' +
       '<ellipse cx="' + x + '" cy="' + y + '" rx="' + orx + '" ry="' + ory + '" fill="url(#dFoam)"/>' +
       '<ellipse cx="' + x + '" cy="' + y + '" rx="' + mrx + '" ry="' + mry + '" fill="url(#dGroove)"/>' +
       '<ellipse cx="' + x + '" cy="' + y + '" rx="' + irx + '" ry="' + iry + '" fill="url(#dWell)"/>' +
-      '<ellipse cx="' + hlx + '" cy="' + hly + '" rx="' + (orx*0.28) + '" ry="' + (ory*0.2) + '" fill="rgba(255,160,160,0.12)"/>'
+      '<ellipse cx="' + hlx2 + '" cy="' + hly2 + '" rx="' + (orx*0.28) + '" ry="' + (ory*0.2) + '" fill="rgba(255,160,160,0.12)"/>'
     );
   }
+
+  function ring(x, y, isLeft) {
+    if (mc.cShape) {
+      return '<path d="' + dPath(x, y, orx+7, ory+7, isLeft) + '" fill="none" stroke="#FF5859" stroke-width="2.5"/>';
+    }
+    return '<ellipse cx="' + x + '" cy="' + y + '" rx="' + (orx+7) + '" ry="' + (ory+7) + '" fill="none" stroke="#FF5859" stroke-width="2.5"/>';
+  }
+
+  // Build cup strings (this populates cupDefs)
+  var leftCup  = cup(lx, cy, true);
+  var rightCup = cup(rx, cy, false);
 
   return (
     '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;">' +
@@ -776,36 +839,26 @@ function buildDiagram(a) {
         '<stop offset="0%" stop-color="#120202"/>' +
         '<stop offset="100%" stop-color="#050000"/>' +
       '</radialGradient>' +
+      cupDefs +
     '</defs>' +
-
-    // Warm off-white background
     '<rect width="' + W + '" height="' + H + '" fill="#f2ede6" rx="8"/>' +
-
-    // Strap drop shadow
     '<path d="' + sp + '" transform="translate(2,3)" fill="rgba(0,0,0,0.15)"/>' +
-    // Strap body
     '<path d="' + sp + '" fill="#1a1a1a" stroke="#2c2c2c" stroke-width="1"/>' +
-
-    // Nose bridge label (sits below arch on the light background)
-    '<text x="160" y="166" text-anchor="middle" fill="rgba(0,0,0,0.28)" font-size="9" font-family="Montserrat,sans-serif" font-weight="600" letter-spacing="0.5">nose bridge</text>' +
-
-    // Ghost cups (default reference, faint dashed)
+    '<text x="160" y="170" text-anchor="middle" fill="rgba(0,0,0,0.28)" font-size="9" font-family="Montserrat,sans-serif" font-weight="600" letter-spacing="0.5">nose bridge</text>' +
     ghostSVG +
-
-    // Cups
-    cup(lx, cy) +
-    cup(rx, cy) +
-
-    // Bright red placement rings
-    '<ellipse cx="' + lx + '" cy="' + cy + '" rx="' + (orx+7) + '" ry="' + (ory+7) + '" fill="none" stroke="#FF5859" stroke-width="2.5"/>' +
-    '<ellipse cx="' + rx + '" cy="' + cy + '" rx="' + (orx+7) + '" ry="' + (ory+7) + '" fill="none" stroke="#FF5859" stroke-width="2.5"/>' +
-
+    leftCup + rightCup +
+    ring(lx, cy, true) + ring(rx, cy, false) +
     '</svg>'
   );
 }
 
 // ── Results ────────────────────────────────────────────────────
 function renderResults(a) {
+  var mc = MASK_CONFIG[a.maskId] || MASK_CONFIG.original;
+
+  var lbl = document.getElementById('maskLabel');
+  if (lbl) lbl.textContent = mc.label;
+
   var ipdSummary = {
     narrow:  'Your eyes are closer together than average',
     average: 'Your eye spacing is about average',
@@ -819,41 +872,35 @@ function renderResults(a) {
   document.getElementById('faceSummary').textContent =
     ipdSummary[a.ipdCat] + heightSummary[a.eyePos] + (a.real ? '' : ' (estimated)');
 
-  document.getElementById('maskDiagram').innerHTML = buildDiagram(a);
+  document.getElementById('maskDiagram').innerHTML = buildDiagram(a, a.maskId);
 
-  // Raw measurements (small, for calibration/transparency)
+  // Glasses warning banner
+  var gwarn = document.getElementById('glassesWarn');
+  if (gwarn) gwarn.style.display = a.glassesWarning ? 'block' : 'none';
+
+  // Raw measurements
   var dbg = document.getElementById('measDebug');
-  if (dbg && a.real) {
-    dbg.textContent = 'eye spacing ' + (a.ipdR * 100).toFixed(1) + ' · eye height ' + (a.eyeHR * 100).toFixed(1) + ' · nose ' + (a.noseR * 100).toFixed(1);
+  if (dbg) {
+    dbg.textContent = a.real
+      ? 'eye spacing ' + (a.ipdR * 100).toFixed(1) + ' · eye height ' + (a.eyeHR * 100).toFixed(1) + ' · nose ' + (a.noseR * 100).toFixed(1)
+      : '';
   }
 
   var recs = [
     {
       icon: '↔',
       label: 'Left–right spacing',
-      text: {
-        narrow:  'Place the cups so they almost touch — leave just a finger-width gap (about ¼ inch / 6mm) between them.',
-        average: 'Leave about ¾ inch (20mm) between the inner edges of the two cups.',
-        wide:    'Leave about 1½ inches (38mm) between the inner edges of the two cups.'
-      }[a.ipdCat]
+      text: mc.spacingCopy[a.ipdCat]
     },
     {
       icon: '↕',
       label: 'Up–down position',
-      text: {
-        high:     'Slide both cups toward the TOP edge of the strap until they overhang it by about ½ inch (12mm).',
-        centered: 'Centre both cups on the strap — aim for equal overhang on the top and bottom edges.',
-        low:      'Slide both cups toward the BOTTOM edge (nose arch side) until they overhang it by about ½ inch (12mm).'
-      }[a.eyePos]
+      text: mc.heightCopy[a.eyePos]
     },
     {
       icon: '↻',
       label: 'Cup rotation',
-      text: {
-        high:    'The cups taper at the temple side. With a high nose bridge, angle the thick inner edge slightly downward — rotate each cup ~10° toward your nose arch — for the best seal.',
-        average: 'Start with the thick inner edge of each cup facing straight toward your nose. If you feel light leaking, rotate each cup up to 15° until the foam seals flush all the way around.',
-        low:     'With a longer nose, point the thick inner edge of each cup straight toward the bridge of your nose. Rotate slightly upward if you feel a gap near the top inner corner.'
-      }[a.noseBridge]
+      text: mc.rotationCopy
     }
   ];
 
