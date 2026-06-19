@@ -208,7 +208,7 @@
     </div>
 
     <div class="pb" style="display:flex;flex-direction:column;gap:12px;">
-      <button class="btn btn-p" id="startBtn">Get Started</button>
+      <button class="btn btn-p" id="startBtn">Get started</button>
     </div>
   </div>
 </div>
@@ -355,6 +355,7 @@ var scanReady    = false;
 var scanDone     = false;
 
 var STABLE_FRAMES = 60;
+var fitAnimRaf  = null;
 
 // ── Per-mask configuration ──────────────────────────────────────
 var MASK_CONFIG = {
@@ -376,7 +377,7 @@ var MASK_CONFIG = {
       centered: 'Centre both cups on the strap — aim for equal overhang on the top and bottom edges.',
       low:      'Slide both cups toward the BOTTOM edge (nose arch side) until they overhang it by about 12mm.'
     },
-    rotationCopy: 'Most people get the best seal by angling the thicker edge upwards and the tapered edge down slightly. Start with the eye cups level, then adjust the angle little by little until you achieve total blackout.',
+    rotationCopy: 'Most people get the best seal by angling the thicker edge upwards and the tapered edge down slightly. Start with the eye cups level, then adjust the angle by 5° at a time until you achieve total blackout.',
     cShape: false
   },
   pro: {
@@ -397,7 +398,7 @@ var MASK_CONFIG = {
       centered: 'Centre both cups on the strap — aim for equal overhang on the top and bottom edges.',
       low:      'Slide both cups toward the BOTTOM edge (nose arch side) until they overhang it by about 12mm.'
     },
-    rotationCopy: 'Most people get the best seal by angling the thicker edge upwards and the tapered edge down slightly. Start with the eye cups level, then adjust the angle little by little until you achieve total blackout.',
+    rotationCopy: 'Most people get the best seal by angling the thicker edge upwards and the tapered edge down slightly. Start with the eye cups level, then adjust the angle by 5° at a time until you achieve total blackout.',
     cShape: true
   }
 };
@@ -639,6 +640,7 @@ function renderResults(a) {
   var maskId = a.maskId || 'original';
   var mc = MASK_CONFIG[maskId] || MASK_CONFIG.original;
 
+  if (fitAnimRaf) { cancelAnimationFrame(fitAnimRaf); fitAnimRaf = null; }
   document.getElementById('maskDiagram').innerHTML = buildDiagram(a, maskId);
 
   // Approximate IPD in mm (rough estimate: average face width ~126mm)
@@ -670,6 +672,8 @@ function renderResults(a) {
     makeAccordion(ICONS.horiz, 'HORIZONTAL SPACING', spacingHeadline, spacingBody, 'acc1') +
     makeAccordion(ICONS.vert,  'VERTICAL POSITION',  heightHeadline,  heightBody,  'acc2') +
     makeAccordion(ICONS.rot,   'ROTATION',           rotHeadline,     rotBody,     'acc3');
+
+  setTimeout(function() { startFitAnim(a, mc); }, 60);
 }
 
 function makeAccordion(icon, label, headline, body, id) {
@@ -705,187 +709,146 @@ function toggleAcc(id) {
   if (chev) chev.style.transform = open ? '' : 'rotate(90deg)';
 }
 
-// ── Mask Diagram ───────────────────────────────────────────────
+// ── Mask Diagram (canvas animation) ────────────────────────────
 function buildDiagram(a, maskId) {
-  var mc = MASK_CONFIG[maskId] || MASK_CONFIG.original;
-  var W = 320, H = 190;
-  var CX = 160;
-
-  var hs = mc.halfSpacing[a.ipdCat] || mc.halfSpacing.average;
-  var lx = CX - hs, rx = CX + hs;
-  var yBase = 88;
-  var cy = yBase + (mc.yOff[a.eyePos] || 0);
-  var orx = mc.cupRx, ory = mc.cupRy;
-  var mrx = mc.midRx, mry = mc.midRy;
-  var irx = mc.innerRx, iry = mc.innerRy;
-
-  // Strap path — narrow nose arch (realistic goggles scoop, ~50px wide)
-  var sp = [
-    'M 10,82', 'C 20,82 24,53 45,53',
-    'L 275,53', 'C 296,53 300,82 310,82',
-    'L 310,99', 'C 300,99 296,125 275,125',
-    'L 185,125', 'Q 179,112 174,109',
-    'Q 168,106 160,106',
-    'Q 152,106 146,109', 'Q 141,112 135,125',
-    'L 45,125', 'C 24,125 20,99 10,99',
-    'Z'
-  ].join(' ');
-
-  // Ghost cups (average/centred reference)
-  var ghs = mc.halfSpacing.average;
-  var gLx = CX - ghs, gRx = CX + ghs, gCy = yBase;
-  var showGhost = (a.ipdCat !== 'average' || a.eyePos !== 'centered');
-  var ghostSVG = showGhost ? (
-    '<ellipse cx="' + gLx + '" cy="' + gCy + '" rx="' + (orx+4) + '" ry="' + (ory+4) + '"' +
-      ' fill="none" stroke="rgba(200,80,80,0.18)" stroke-width="1.5" stroke-dasharray="5 4"/>' +
-    '<ellipse cx="' + gRx + '" cy="' + gCy + '" rx="' + (orx+4) + '" ry="' + (ory+4) + '"' +
-      ' fill="none" stroke="rgba(200,80,80,0.18)" stroke-width="1.5" stroke-dasharray="5 4"/>'
-  ) : '';
-
-  // D-shape path for PRO cups
-  function dPath(cx, cy, rx, ry, noseRight) {
-    var n = noseRight ? 1 : -1;
-    var ns  = n * rx,          ts  = -n * rx * 0.68;
-    var nk  = n * rx * 0.75,   tk  = -n * rx * 0.42;
-    return ['M', cx, cy-ry,
-      'C', cx+nk, cy-ry,       cx+ns, cy-ry*0.5,  cx+ns, cy,
-      'C', cx+ns, cy+ry*0.5,   cx+nk, cy+ry,      cx, cy+ry,
-      'C', cx+tk, cy+ry,       cx+ts, cy+ry*0.5,  cx+ts, cy,
-      'C', cx+ts, cy-ry*0.5,   cx+tk, cy-ry,      cx, cy-ry, 'Z'
-    ].join(' ');
-  }
-
-  var cupDefs = '';
-  function cup(x, y, isLeft) {
-    if (mc.cShape) {
-      var noseRight = isLeft;
-      var cid = 'cc' + Math.round(x);
-      cupDefs += '<clipPath id="' + cid + '"><path d="' + dPath(x, y, orx, ory, noseRight) + '"/></clipPath>';
-      var hlx = isLeft ? x + orx*0.18 : x - orx*0.18, hly = y - ory*0.3;
-      return (
-        '<path d="' + dPath(x+3, y+4, orx+2, ory+2, noseRight) + '" fill="rgba(0,0,0,0.28)"/>' +
-        '<path d="' + dPath(x, y, orx, ory, noseRight) + '" fill="url(#dFoam)"/>' +
-        '<g clip-path="url(#' + cid + ')">'  +
-          '<path d="' + dPath(x, y, mrx, mry, noseRight) + '" fill="url(#dGroove)"/>' +
-          '<ellipse cx="' + x + '" cy="' + y + '" rx="' + irx + '" ry="' + iry + '" fill="url(#dWell)"/>' +
-          '<ellipse cx="' + hlx + '" cy="' + hly + '" rx="' + (orx*0.28) + '" ry="' + (ory*0.2) + '" fill="rgba(255,160,160,0.12)"/>' +
-        '</g>'
-      );
-    }
-    var hlx2 = x - orx*0.22, hly2 = y - ory*0.3;
-    return (
-      '<ellipse cx="' + (x+3) + '" cy="' + (y+4) + '" rx="' + (orx+2) + '" ry="' + (ory+2) + '" fill="rgba(0,0,0,0.28)"/>' +
-      '<ellipse cx="' + x + '" cy="' + y + '" rx="' + orx + '" ry="' + ory + '" fill="url(#dFoam)"/>' +
-      '<ellipse cx="' + x + '" cy="' + y + '" rx="' + mrx + '" ry="' + mry + '" fill="url(#dGroove)"/>' +
-      '<ellipse cx="' + x + '" cy="' + y + '" rx="' + irx + '" ry="' + iry + '" fill="url(#dWell)"/>' +
-      '<ellipse cx="' + hlx2 + '" cy="' + hly2 + '" rx="' + (orx*0.28) + '" ry="' + (ory*0.2) + '" fill="rgba(255,160,160,0.12)"/>'
-    );
-  }
-
-  function ring(x, y, isLeft) {
-    if (mc.cShape) {
-      return '<path d="' + dPath(x, y, orx+7, ory+7, isLeft) + '" fill="none" stroke="#FF5859" stroke-width="2.5"/>';
-    }
-    return '<ellipse cx="' + x + '" cy="' + y + '" rx="' + (orx+7) + '" ry="' + (ory+7) + '" fill="none" stroke="#FF5859" stroke-width="2.5"/>';
-  }
-
-  // ── Three measurement indicators ──────────────────────────────
-  var ac = '#34d399';
-  var gapMm = mc.spacingMm[a.ipdCat] || 20;
-
-  // 1. Horizontal gap arrow (between inner cup edges)
-  var arrowY = cy;
-  var aL = lx + irx + 4;
-  var aR = rx - irx - 4;
-  var arrowSVG = (aR > aL + 12) ? (
-    '<g opacity="0.92">' +
-      '<line x1="' + aL + '" y1="' + arrowY + '" x2="' + aR + '" y2="' + arrowY + '" stroke="' + ac + '" stroke-width="1.2"/>' +
-      '<polygon points="' + aL + ',' + arrowY + ' ' + (aL+7) + ',' + (arrowY-3) + ' ' + (aL+7) + ',' + (arrowY+3) + '" fill="' + ac + '"/>' +
-      '<polygon points="' + aR + ',' + arrowY + ' ' + (aR-7) + ',' + (arrowY-3) + ' ' + (aR-7) + ',' + (arrowY+3) + '" fill="' + ac + '"/>' +
-      '<rect x="' + (CX-17) + '" y="' + (arrowY-10) + '" width="34" height="13" rx="3" fill="#161616"/>' +
-      '<text x="' + CX + '" y="' + (arrowY-1) + '" text-anchor="middle" fill="' + ac + '" font-size="8.5" font-family="Montserrat,sans-serif" font-weight="700">' + gapMm + 'mm</text>' +
-    '</g>'
-  ) : '';
-
-  // 2. Vertical overhang indicator (right of diagram)
-  var vx = 306;
-  var strapTop = 53, strapBot = 125, strapMidY = 89;
-  var vertSVG = '';
-  if (a.eyePos === 'high') {
-    var cupTop = cy - ory;
-    var vy1 = cupTop, vy2 = strapTop;
-    var vmid = (vy1 + vy2) / 2;
-    vertSVG = '<g opacity="0.92">' +
-      '<line x1="' + vx + '" y1="' + vy1 + '" x2="' + vx + '" y2="' + vy2 + '" stroke="' + ac + '" stroke-width="1.2"/>' +
-      '<line x1="' + (vx-3) + '" y1="' + vy1 + '" x2="' + (vx+3) + '" y2="' + vy1 + '" stroke="' + ac + '" stroke-width="1.2"/>' +
-      '<line x1="' + (vx-3) + '" y1="' + vy2 + '" x2="' + (vx+3) + '" y2="' + vy2 + '" stroke="' + ac + '" stroke-width="1.2"/>' +
-      '<rect x="' + (vx-16) + '" y="' + (vmid-6) + '" width="32" height="12" rx="3" fill="#161616"/>' +
-      '<text x="' + vx + '" y="' + (vmid+3) + '" text-anchor="middle" fill="' + ac + '" font-size="8" font-family="Montserrat,sans-serif" font-weight="700">12mm</text>' +
-    '</g>';
-  } else if (a.eyePos === 'low') {
-    var cupBot = cy + ory;
-    var vy1b = strapBot, vy2b = cupBot;
-    var vmidb = (vy1b + vy2b) / 2;
-    vertSVG = '<g opacity="0.92">' +
-      '<line x1="' + vx + '" y1="' + vy1b + '" x2="' + vx + '" y2="' + vy2b + '" stroke="' + ac + '" stroke-width="1.2"/>' +
-      '<line x1="' + (vx-3) + '" y1="' + vy1b + '" x2="' + (vx+3) + '" y2="' + vy1b + '" stroke="' + ac + '" stroke-width="1.2"/>' +
-      '<line x1="' + (vx-3) + '" y1="' + vy2b + '" x2="' + (vx+3) + '" y2="' + vy2b + '" stroke="' + ac + '" stroke-width="1.2"/>' +
-      '<rect x="' + (vx-16) + '" y="' + (vmidb-6) + '" width="32" height="12" rx="3" fill="#161616"/>' +
-      '<text x="' + vx + '" y="' + (vmidb+3) + '" text-anchor="middle" fill="' + ac + '" font-size="8" font-family="Montserrat,sans-serif" font-weight="700">12mm</text>' +
-    '</g>';
-  } else {
-    // centered — small "=" label
-    vertSVG = '<g opacity="0.70">' +
-      '<text x="' + vx + '" y="' + (strapMidY+3) + '" text-anchor="middle" fill="' + ac + '" font-size="8" font-family="Montserrat,sans-serif" font-weight="700">=</text>' +
-    '</g>';
-  }
-
-  // 3. Rotation arc indicator (on left cup, inner side going up)
-  var rotArcR = Math.round((irx + mrx) / 2);
-  var rsx = lx + rotArcR, rsy = cy;      // start: 3-o'clock (nose/inner side)
-  var rex = lx, rey = cy - rotArcR;       // end: 12-o'clock (top)
-  var rotSVG = '<g opacity="0.92">' +
-    '<path d="M ' + rsx + ',' + rsy + ' A ' + rotArcR + ',' + rotArcR + ' 0 0,0 ' + rex + ',' + rey + '" fill="none" stroke="' + ac + '" stroke-width="1.5" stroke-linecap="round"/>' +
-    // arrowhead at end (top of arc, pointing left in CCW direction)
-    '<polygon points="' + rex + ',' + rey + ' ' + (rex+5) + ',' + (rey-4) + ' ' + (rex+5) + ',' + (rey+4) + '" fill="' + ac + '"/>' +
-    // label
-    '<rect x="' + (lx-16) + '" y="' + (rey-11) + '" width="32" height="12" rx="3" fill="#161616"/>' +
-    '<text x="' + lx + '" y="' + (rey-2) + '" text-anchor="middle" fill="' + ac + '" font-size="8" font-family="Montserrat,sans-serif" font-weight="700">~5°</text>' +
-  '</g>';
-
-  var leftCup  = cup(lx, cy, true);
-  var rightCup = cup(rx, cy, false);
-
-  return (
-    '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;">' +
-    '<defs>' +
-      '<radialGradient id="dFoam" cx="36%" cy="28%" r="68%">' +
-        '<stop offset="0%" stop-color="#c54040"/>' +
-        '<stop offset="50%" stop-color="#8c2020"/>' +
-        '<stop offset="100%" stop-color="#4e0c0c"/>' +
-      '</radialGradient>' +
-      '<radialGradient id="dGroove" cx="50%" cy="40%" r="60%">' +
-        '<stop offset="0%" stop-color="#2e0606"/>' +
-        '<stop offset="100%" stop-color="#1a0303"/>' +
-      '</radialGradient>' +
-      '<radialGradient id="dWell" cx="50%" cy="45%" r="55%">' +
-        '<stop offset="0%" stop-color="#120202"/>' +
-        '<stop offset="100%" stop-color="#050000"/>' +
-      '</radialGradient>' +
-      cupDefs +
-    '</defs>' +
-    '<rect width="' + W + '" height="' + H + '" fill="#f2ede6" rx="8"/>' +
-    '<path d="' + sp + '" transform="translate(2,3)" fill="rgba(0,0,0,0.15)"/>' +
-    '<path d="' + sp + '" fill="#1a1a1a" stroke="#2c2c2c" stroke-width="1"/>' +
-    ghostSVG +
-    leftCup + rightCup +
-    ring(lx, cy, true) + ring(rx, cy, false) +
-    arrowSVG +
-    vertSVG +
-    rotSVG +
-    '</svg>'
-  );
+  return '<canvas id="fitCanvas" width="320" height="180" style="width:100%;display:block;border-radius:6px;"></canvas>';
 }
+
+function startFitAnim(a, mc) {
+  var canvas = document.getElementById('fitCanvas');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = 320, H = 180, CX = 160, yBase = 88;
+
+  var startHs  = mc.halfSpacing.average;
+  var targetHs = mc.halfSpacing[a.ipdCat] || startHs;
+  var targetYo = mc.yOff[a.eyePos] || 0;
+  var targetRot = 5 * Math.PI / 180;
+  var cupRx = mc.cupRx, cupRy = mc.cupRy;
+
+  // Phase timing (ms)
+  var T1 = 1100, T2 = 2300, T3 = 3300, T_HOLD = 4800, T_FADE = 5400, T_REST = 6500;
+
+  function eio(t) { t = Math.max(0, Math.min(1, t)); return t<0.5 ? 2*t*t : -1+(4-2*t)*t; }
+  function lerp(a, b, t) { return a + (b-a)*t; }
+
+  function getState(ms) {
+    var t = ms % T_REST;
+    if (t < T1) {
+      return { hs: lerp(startHs, targetHs, eio(t/T1)), yo: 0, rot: 0 };
+    } else if (t < T2) {
+      return { hs: targetHs, yo: lerp(0, targetYo, eio((t-T1)/(T2-T1))), rot: 0 };
+    } else if (t < T3) {
+      return { hs: targetHs, yo: targetYo, rot: lerp(0, targetRot, eio((t-T2)/(T3-T2))) };
+    } else if (t < T_HOLD) {
+      return { hs: targetHs, yo: targetYo, rot: targetRot };
+    } else if (t < T_FADE) {
+      var p = eio((t-T_HOLD)/(T_FADE-T_HOLD));
+      return { hs: lerp(targetHs, startHs, p), yo: lerp(targetYo, 0, p), rot: lerp(targetRot, 0, p) };
+    } else {
+      return { hs: startHs, yo: 0, rot: 0 };
+    }
+  }
+
+  var t0 = null;
+  function frame(ts) {
+    if (!t0) t0 = ts;
+    var s = getState(ts - t0);
+    ctx.clearRect(0, 0, W, H);
+
+    // Warm off-white background
+    ctx.fillStyle = '#f0ede8';
+    ctx.beginPath();
+    ctx.moveTo(8,0); ctx.lineTo(W-8,0); ctx.quadraticCurveTo(W,0,W,8);
+    ctx.lineTo(W,H-8); ctx.quadraticCurveTo(W,H,W-8,H);
+    ctx.lineTo(8,H); ctx.quadraticCurveTo(0,H,0,H-8);
+    ctx.lineTo(0,8); ctx.quadraticCurveTo(0,0,8,0); ctx.closePath();
+    ctx.fill();
+
+    // Strap shadow
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.22)';
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 3;
+    strapPath(ctx, W, H, CX);
+    var sg = ctx.createLinearGradient(0,53,0,125);
+    sg.addColorStop(0,'#2e2e2e'); sg.addColorStop(0.4,'#1a1a1a');
+    sg.addColorStop(0.7,'#171717'); sg.addColorStop(1,'#232323');
+    ctx.fillStyle = sg;
+    ctx.fill();
+    ctx.restore();
+
+    // Strap top velcro hint
+    ctx.save();
+    strapPath(ctx, W, H, CX);
+    ctx.clip();
+    var vg = ctx.createLinearGradient(0,53,0,66);
+    vg.addColorStop(0,'rgba(255,255,255,0.055)');
+    vg.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle = vg;
+    ctx.fillRect(0,53,W,13);
+    ctx.restore();
+
+    // Cups
+    var lx = CX - s.hs, rx = CX + s.hs, cy = yBase + s.yo;
+    drawCup(ctx, lx, cy, cupRx, cupRy, -s.rot);
+    drawCup(ctx, rx, cy, cupRx, cupRy,  s.rot);
+
+    fitAnimRaf = requestAnimationFrame(frame);
+  }
+  fitAnimRaf = requestAnimationFrame(frame);
+}
+
+function strapPath(ctx, W, H, CX) {
+  ctx.beginPath();
+  ctx.moveTo(10,82); ctx.bezierCurveTo(20,82,24,53,45,53);
+  ctx.lineTo(275,53); ctx.bezierCurveTo(296,53,300,82,310,82);
+  ctx.lineTo(310,99); ctx.bezierCurveTo(300,99,296,125,275,125);
+  ctx.lineTo(185,125); ctx.quadraticCurveTo(179,112,174,109);
+  ctx.quadraticCurveTo(168,106,160,106); ctx.quadraticCurveTo(152,106,146,109);
+  ctx.quadraticCurveTo(141,112,135,125);
+  ctx.lineTo(45,125); ctx.bezierCurveTo(24,125,20,99,10,99);
+  ctx.closePath();
+}
+
+function drawCup(ctx, x, y, rx, ry, angle) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+
+  // Drop shadow
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.55)';
+  ctx.shadowBlur = 14;
+  ctx.shadowOffsetX = 1;
+  ctx.shadowOffsetY = 5;
+  var og = ctx.createRadialGradient(-rx*0.2,-ry*0.2,rx*0.04, 0,0,rx*1.08);
+  og.addColorStop(0,'#6e6e6e'); og.addColorStop(0.3,'#545454');
+  og.addColorStop(0.65,'#404040'); og.addColorStop(1,'#2a2a2a');
+  ctx.beginPath(); ctx.ellipse(0,0,rx,ry,0,0,Math.PI*2);
+  ctx.fillStyle = og; ctx.fill();
+  ctx.restore();
+
+  // Inner ring (recessed)
+  var irx = Math.round(rx*0.70), iry = Math.round(ry*0.70);
+  ctx.beginPath(); ctx.ellipse(0,0,irx,iry,0,0,Math.PI*2);
+  ctx.fillStyle = '#333333'; ctx.fill();
+
+  // Eye well
+  var wrx = Math.round(rx*0.51), wry = Math.round(ry*0.51);
+  var wg = ctx.createRadialGradient(0,0,0, 0,0,wrx);
+  wg.addColorStop(0,'#0f0f0f'); wg.addColorStop(1,'#1c1c1c');
+  ctx.beginPath(); ctx.ellipse(0,0,wrx,wry,0,0,Math.PI*2);
+  ctx.fillStyle = wg; ctx.fill();
+
+  // Highlight shimmer
+  ctx.beginPath(); ctx.ellipse(-rx*0.17,-ry*0.23,rx*0.23,ry*0.15,-0.3,0,Math.PI*2);
+  ctx.fillStyle = 'rgba(255,255,255,0.09)'; ctx.fill();
+
+  ctx.restore();
+}
+
 
 // ── Error toast ─────────────────────────────────────────────────
 function showErr(msg) {
