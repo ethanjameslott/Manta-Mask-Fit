@@ -140,7 +140,7 @@
       width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
       background: var(--red-d); border: 1px solid var(--red-b);
       display: flex; align-items: center; justify-content: center;
-      font-size: 20px; line-height: 1;
+      color: var(--red);
     }
     .rec-label {
       font-family: 'Poppins', sans-serif; font-size: 12px; font-weight: 700;
@@ -202,8 +202,8 @@
         -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
         Find your<br/>perfect fit
       </h1>
-      <p style="font-size:15px;color:var(--muted);line-height:1.7;max-width:280px;margin:0 auto;">
-        Scan your face to work out where to place your eye cups for total blackout.
+      <p style="font-size:15px;color:var(--muted);line-height:1.7;max-width:300px;margin:0 auto;">
+        Scan your face to work out where to place your eye cups for 100% blackout.
       </p>
     </div>
 
@@ -329,8 +329,8 @@
     <div style="display:flex;flex-direction:column;gap:10px;" id="recList"></div>
 
     <div style="display:flex;flex-direction:column;gap:10px;">
-      <button class="btn btn-p" id="retakeBtn">Scan Again</button>
-      <button class="btn btn-s" id="restartBtn">Start Over</button>
+      <button class="btn btn-p" id="retakeBtn">Scan again</button>
+      <button class="btn btn-s" id="restartBtn">Start over</button>
     </div>
 
   </div>
@@ -376,7 +376,7 @@ var MASK_CONFIG = {
       centered: 'Centre both cups on the strap — aim for equal overhang on the top and bottom edges.',
       low:      'Slide both cups toward the BOTTOM edge (nose arch side) until they overhang it by about 12mm.'
     },
-    rotationCopy: 'The cups are slightly thicker on the inner (nose-facing) edge. Most people get the best seal by rotating each cup so that thick edge angles upward toward the brow — try about 10–15° and adjust until the foam sits flush all the way around.',
+    rotationCopy: 'Most people get the best seal by angling the thicker edge upwards and the tapered edge down slightly. Start with the eye cups level, then adjust the angle little by little until you achieve total blackout.',
     cShape: false
   },
   pro: {
@@ -397,7 +397,7 @@ var MASK_CONFIG = {
       centered: 'Centre both cups on the strap — aim for equal overhang on the top and bottom edges.',
       low:      'Slide both cups toward the BOTTOM edge (nose arch side) until they overhang it by about 12mm.'
     },
-    rotationCopy: 'The PRO cup tapers toward the temple side — there is only one correct orientation. Attach each cup with the fuller (thicker) edge facing your nose and the flatter, tapered edge facing your temple. Double-check this before pressing the velcro down.',
+    rotationCopy: 'Most people get the best seal by angling the thicker edge upwards and the tapered edge down slightly. Start with the eye cups level, then adjust the angle little by little until you achieve total blackout.',
     cShape: true
   }
 };
@@ -495,7 +495,7 @@ function startLoop() {
   if (el) el.textContent = 'Fill your face in the oval\u2026';
   setTimeout(function() {
     scanReady = true;
-    if (el) el.textContent = 'Look straight ahead — remove glasses';
+    if (el) el.textContent = 'Look straight ahead';
   }, 1800);
 
   function loop() {
@@ -628,34 +628,48 @@ function fallback(noFace) {
 }
 
 // ── Results rendering ──────────────────────────────────────────
+// SVG icons for accordion cards
+var ICONS = {
+  horiz: '<svg width="20" height="12" viewBox="0 0 20 12" fill="none" style="display:block;"><path d="M1 6H19M1 6L5 2M1 6L5 10M19 6L15 2M19 6L15 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  vert:  '<svg width="12" height="20" viewBox="0 0 12 20" fill="none" style="display:block;"><path d="M6 1V19M6 1L2 5M6 1L10 5M6 19L2 15M6 19L10 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  rot:   '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" style="display:block;"><path d="M9 2A7 7 0 1 1 3.22 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M1 1L3 5L7 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+};
+
 function renderResults(a) {
   var maskId = a.maskId || 'original';
   var mc = MASK_CONFIG[maskId] || MASK_CONFIG.original;
 
   document.getElementById('maskDiagram').innerHTML = buildDiagram(a, maskId);
 
+  // Approximate IPD in mm (rough estimate: average face width ~126mm)
+  var ipdMm = a.real ? Math.round(a.ipdR * 126) : 63;
   var gapMm = mc.spacingMm[a.ipdCat] || 20;
 
-  // Card 1: Spacing (accordion)
-  var spacingHeadline = gapMm + 'mm gap between inner cup edges';
-  var spacingBody = mc.spacingCopy[a.ipdCat] +
-    ' If light leaks in on the inner edge, move the cups slightly closer together. If light leaks in on the outer edge, move them slightly further apart.';
+  // Card 1: Left-right spacing
+  var spacingHeadline = gapMm + 'mm gap between eye cups';
+  var spacingBody = 'Your pupils are around ' + ipdMm + 'mm apart, so we recommend placing the eye cups with a ' + gapMm + 'mm gap between the inner edges. If light leaks on the inner edges, move the cups slightly closer together. If light leaks on the outer edges, move the cups slightly further apart.';
 
-  // Card 2: Height (accordion)
-  var heightLabels = { high: 'Position cups higher on strap', centered: 'Cups centred on strap', low: 'Position cups lower on strap' };
-  var heightHeadline = heightLabels[a.eyePos] || heightLabels.centered;
-  var heightBody = mc.heightCopy[a.eyePos] +
-    ' After placing, if light sneaks in from above, nudge both cups upward a few millimetres; if from below, nudge them down.';
+  // Card 2: Vertical position
+  var heightHeadline, heightBody;
+  if (a.eyePos === 'high') {
+    heightHeadline = '12mm overhang on the top edge';
+    heightBody = 'Your eyes sit higher on your face, so we recommend placing the eye cups with a 12mm overhang on the top edge of the strap. If light leaks from the top edge, move the cups slightly higher. If light leaks from the bottom edge, move the cups slightly lower.';
+  } else if (a.eyePos === 'low') {
+    heightHeadline = '12mm overhang on the bottom edge';
+    heightBody = 'Your eyes sit lower on your face, so we recommend placing the eye cups with a 12mm overhang on the bottom edge of the strap. If light leaks from the top edge, move the cups slightly higher. If light leaks from the bottom edge, move the cups slightly lower.';
+  } else {
+    heightHeadline = 'Equal overhang on both edges';
+    heightBody = 'Your eyes are positioned centrally, so we recommend placing the eye cups with equal overhang on the top and bottom edges of the strap. If light leaks from the top edge, move the cups slightly higher. If light leaks from the bottom edge, move the cups slightly lower.';
+  }
 
-  // Card 3: Rotation (accordion)
-  var rotHeadline = mc.cShape ? 'Flat (tapered) edge faces your temple' : 'Thick inner edge angled upward';
-  var rotBody = mc.rotationCopy +
-    ' Once placed, press gently around the full foam perimeter. Any area that lifts away from your face is where light can enter — rotate slightly toward that edge and press again.';
+  // Card 3: Rotation
+  var rotHeadline = 'Thick edge angled 5\u00b0 upwards';
+  var rotBody = mc.rotationCopy;
 
   document.getElementById('recList').innerHTML =
-    makeAccordion('\u2194', 'LEFT-RIGHT SPACING', spacingHeadline, spacingBody, 'acc1') +
-    makeAccordion('\u2195', 'UP-DOWN POSITION',   heightHeadline, heightBody,   'acc2') +
-    makeAccordion('\u21bb', 'ROTATION',            rotHeadline,    rotBody,      'acc3');
+    makeAccordion(ICONS.horiz, 'HORIZONTAL SPACING', spacingHeadline, spacingBody, 'acc1') +
+    makeAccordion(ICONS.vert,  'VERTICAL POSITION',  heightHeadline,  heightBody,  'acc2') +
+    makeAccordion(ICONS.rot,   'ROTATION',           rotHeadline,     rotBody,     'acc3');
 }
 
 function makeAccordion(icon, label, headline, body, id) {
@@ -678,6 +692,15 @@ function toggleAcc(id) {
   var body = document.getElementById(id);
   var chev = document.getElementById('chev-' + id);
   var open = body.style.display === 'block';
+  // Close all other accordions first
+  ['acc1','acc2','acc3'].forEach(function(otherId) {
+    if (otherId !== id) {
+      var ob = document.getElementById(otherId);
+      var oc = document.getElementById('chev-' + otherId);
+      if (ob) ob.style.display = 'none';
+      if (oc) oc.style.transform = '';
+    }
+  });
   body.style.display = open ? 'none' : 'block';
   if (chev) chev.style.transform = open ? '' : 'rotate(90deg)';
 }
@@ -696,14 +719,14 @@ function buildDiagram(a, maskId) {
   var mrx = mc.midRx, mry = mc.midRy;
   var irx = mc.innerRx, iry = mc.innerRy;
 
-  // Strap path — nose arch curves UP (goggles-style scoop)
+  // Strap path — narrow nose arch (realistic goggles scoop, ~50px wide)
   var sp = [
     'M 10,82', 'C 20,82 24,53 45,53',
     'L 275,53', 'C 296,53 300,82 310,82',
     'L 310,99', 'C 300,99 296,125 275,125',
-    'L 218,125', 'Q 206,110 196,106',
-    'Q 184,102 160,101',
-    'Q 136,102 124,106', 'Q 114,110 102,125',
+    'L 185,125', 'Q 179,112 174,109',
+    'Q 168,106 160,106',
+    'Q 152,106 146,109', 'Q 141,112 135,125',
     'L 45,125', 'C 24,125 20,99 10,99',
     'Z'
   ].join(' ');
@@ -766,25 +789,69 @@ function buildDiagram(a, maskId) {
     return '<ellipse cx="' + x + '" cy="' + y + '" rx="' + (orx+7) + '" ry="' + (ory+7) + '" fill="none" stroke="#FF5859" stroke-width="2.5"/>';
   }
 
-  // Measurement arrow between inner cup edges
-  var arrowY = cy;
-  var aL = lx + irx + 4;  // left inner edge + small gap
-  var aR = rx - irx - 4;  // right inner edge - small gap
+  // ── Three measurement indicators ──────────────────────────────
+  var ac = '#34d399';
   var gapMm = mc.spacingMm[a.ipdCat] || 20;
-  var arrowColor = '#34d399';
-  var arrowSVG = (aR > aL + 10) ? (
-    '<g opacity="0.9">' +
-      // line
-      '<line x1="' + aL + '" y1="' + arrowY + '" x2="' + aR + '" y2="' + arrowY + '" stroke="' + arrowColor + '" stroke-width="1.2"/>' +
-      // left arrowhead (pointing left)
-      '<polygon points="' + aL + ',' + arrowY + ' ' + (aL+7) + ',' + (arrowY-3) + ' ' + (aL+7) + ',' + (arrowY+3) + '" fill="' + arrowColor + '"/>' +
-      // right arrowhead (pointing right)
-      '<polygon points="' + aR + ',' + arrowY + ' ' + (aR-7) + ',' + (arrowY-3) + ' ' + (aR-7) + ',' + (arrowY+3) + '" fill="' + arrowColor + '"/>' +
-      // label above arrow
-      '<rect x="' + (CX-16) + '" y="' + (arrowY-10) + '" width="32" height="13" rx="3" fill="#161616"/>' +
-      '<text x="' + CX + '" y="' + (arrowY-1) + '" text-anchor="middle" fill="' + arrowColor + '" font-size="8.5" font-family="Montserrat,sans-serif" font-weight="700">' + gapMm + 'mm</text>' +
+
+  // 1. Horizontal gap arrow (between inner cup edges)
+  var arrowY = cy;
+  var aL = lx + irx + 4;
+  var aR = rx - irx - 4;
+  var arrowSVG = (aR > aL + 12) ? (
+    '<g opacity="0.92">' +
+      '<line x1="' + aL + '" y1="' + arrowY + '" x2="' + aR + '" y2="' + arrowY + '" stroke="' + ac + '" stroke-width="1.2"/>' +
+      '<polygon points="' + aL + ',' + arrowY + ' ' + (aL+7) + ',' + (arrowY-3) + ' ' + (aL+7) + ',' + (arrowY+3) + '" fill="' + ac + '"/>' +
+      '<polygon points="' + aR + ',' + arrowY + ' ' + (aR-7) + ',' + (arrowY-3) + ' ' + (aR-7) + ',' + (arrowY+3) + '" fill="' + ac + '"/>' +
+      '<rect x="' + (CX-17) + '" y="' + (arrowY-10) + '" width="34" height="13" rx="3" fill="#161616"/>' +
+      '<text x="' + CX + '" y="' + (arrowY-1) + '" text-anchor="middle" fill="' + ac + '" font-size="8.5" font-family="Montserrat,sans-serif" font-weight="700">' + gapMm + 'mm</text>' +
     '</g>'
   ) : '';
+
+  // 2. Vertical overhang indicator (right of diagram)
+  var vx = 306;
+  var strapTop = 53, strapBot = 125, strapMidY = 89;
+  var vertSVG = '';
+  if (a.eyePos === 'high') {
+    var cupTop = cy - ory;
+    var vy1 = cupTop, vy2 = strapTop;
+    var vmid = (vy1 + vy2) / 2;
+    vertSVG = '<g opacity="0.92">' +
+      '<line x1="' + vx + '" y1="' + vy1 + '" x2="' + vx + '" y2="' + vy2 + '" stroke="' + ac + '" stroke-width="1.2"/>' +
+      '<line x1="' + (vx-3) + '" y1="' + vy1 + '" x2="' + (vx+3) + '" y2="' + vy1 + '" stroke="' + ac + '" stroke-width="1.2"/>' +
+      '<line x1="' + (vx-3) + '" y1="' + vy2 + '" x2="' + (vx+3) + '" y2="' + vy2 + '" stroke="' + ac + '" stroke-width="1.2"/>' +
+      '<rect x="' + (vx-16) + '" y="' + (vmid-6) + '" width="32" height="12" rx="3" fill="#161616"/>' +
+      '<text x="' + vx + '" y="' + (vmid+3) + '" text-anchor="middle" fill="' + ac + '" font-size="8" font-family="Montserrat,sans-serif" font-weight="700">12mm</text>' +
+    '</g>';
+  } else if (a.eyePos === 'low') {
+    var cupBot = cy + ory;
+    var vy1b = strapBot, vy2b = cupBot;
+    var vmidb = (vy1b + vy2b) / 2;
+    vertSVG = '<g opacity="0.92">' +
+      '<line x1="' + vx + '" y1="' + vy1b + '" x2="' + vx + '" y2="' + vy2b + '" stroke="' + ac + '" stroke-width="1.2"/>' +
+      '<line x1="' + (vx-3) + '" y1="' + vy1b + '" x2="' + (vx+3) + '" y2="' + vy1b + '" stroke="' + ac + '" stroke-width="1.2"/>' +
+      '<line x1="' + (vx-3) + '" y1="' + vy2b + '" x2="' + (vx+3) + '" y2="' + vy2b + '" stroke="' + ac + '" stroke-width="1.2"/>' +
+      '<rect x="' + (vx-16) + '" y="' + (vmidb-6) + '" width="32" height="12" rx="3" fill="#161616"/>' +
+      '<text x="' + vx + '" y="' + (vmidb+3) + '" text-anchor="middle" fill="' + ac + '" font-size="8" font-family="Montserrat,sans-serif" font-weight="700">12mm</text>' +
+    '</g>';
+  } else {
+    // centered — small "=" label
+    vertSVG = '<g opacity="0.70">' +
+      '<text x="' + vx + '" y="' + (strapMidY+3) + '" text-anchor="middle" fill="' + ac + '" font-size="8" font-family="Montserrat,sans-serif" font-weight="700">=</text>' +
+    '</g>';
+  }
+
+  // 3. Rotation arc indicator (on left cup, inner side going up)
+  var rotArcR = Math.round((irx + mrx) / 2);
+  var rsx = lx + rotArcR, rsy = cy;      // start: 3-o'clock (nose/inner side)
+  var rex = lx, rey = cy - rotArcR;       // end: 12-o'clock (top)
+  var rotSVG = '<g opacity="0.92">' +
+    '<path d="M ' + rsx + ',' + rsy + ' A ' + rotArcR + ',' + rotArcR + ' 0 0,0 ' + rex + ',' + rey + '" fill="none" stroke="' + ac + '" stroke-width="1.5" stroke-linecap="round"/>' +
+    // arrowhead at end (top of arc, pointing left in CCW direction)
+    '<polygon points="' + rex + ',' + rey + ' ' + (rex+5) + ',' + (rey-4) + ' ' + (rex+5) + ',' + (rey+4) + '" fill="' + ac + '"/>' +
+    // label
+    '<rect x="' + (lx-16) + '" y="' + (rey-11) + '" width="32" height="12" rx="3" fill="#161616"/>' +
+    '<text x="' + lx + '" y="' + (rey-2) + '" text-anchor="middle" fill="' + ac + '" font-size="8" font-family="Montserrat,sans-serif" font-weight="700">~5°</text>' +
+  '</g>';
 
   var leftCup  = cup(lx, cy, true);
   var rightCup = cup(rx, cy, false);
@@ -814,6 +881,8 @@ function buildDiagram(a, maskId) {
     leftCup + rightCup +
     ring(lx, cy, true) + ring(rx, cy, false) +
     arrowSVG +
+    vertSVG +
+    rotSVG +
     '</svg>'
   );
 }
